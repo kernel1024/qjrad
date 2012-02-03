@@ -102,6 +102,7 @@ void MainWindow::resetRadicals()
 
 void MainWindow::radicalPressed(bool)
 {
+    if (!allowLookup) return;
     QStringList kl;
     kl.clear();
     for (int i=0;i<buttons.count();i++) {
