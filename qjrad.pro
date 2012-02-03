@@ -11,8 +11,16 @@ TEMPLATE = app
 
 
 SOURCES += main.cpp\
-        mainwindow.cpp
+        mainwindow.cpp \
+    kdictionary.cpp
 
-HEADERS  += mainwindow.h
+HEADERS  += mainwindow.h \
+    kdictionary.h
 
 FORMS    += mainwindow.ui
+
+RESOURCES += \
+    qjrad.qrc
+
+
+
