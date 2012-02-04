@@ -1,5 +1,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include "kanjimodel.h"
+#include "settingsdlg.h"
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -7,22 +9,77 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
     if (!dict.loadDictionaries()) {
-        QMessageBox::critical(this,tr("QJRad - error"),tr("Cannot load main dictionaries"));
-        close();
+        QMessageBox::critical(this,tr("QJRad - error"),tr("Cannot load main dictionaries\nError: %1").arg(dict.errorString));
         return;
     }
 
+    QIcon appicon;
+    appicon.addFile(":/data/appicon22.png",QSize(22,22));
+    appicon.addFile(":/data/appicon32.png",QSize(32,32));
+    appicon.addFile(":/data/appicon48.png",QSize(48,48));
+    appicon.addFile(":/data/appicon64.png",QSize(64,64));
+    appicon.addFile(":/data/appicon128.png",QSize(128,128));
+    setWindowIcon(appicon);
+
+    foundKanji.clear();
+
+    statusMsg = new QLabel(tr("Ready"));
+    statusMsg->setMinimumWidth(150);
+    statusMsg->setAlignment(Qt::AlignCenter);
+    statusBar()->addPermanentWidget(statusMsg);
+
     connect(ui->btnReset,SIGNAL(clicked()),this,SLOT(resetRadicals()));
+    connect(ui->btnSettings,SIGNAL(clicked()),this,SLOT(settingsDlg()));
+    connect(ui->listKanji,SIGNAL(clicked(QModelIndex)),this,SLOT(kanjiClicked(QModelIndex)));
+    connect(ui->listKanji,SIGNAL(activated(QModelIndex)),this,SLOT(kanjiAdd(QModelIndex)));
+
+    readSettings();
 
     allowLookup = false;
     renderButtons();
     allowLookup = true;
+
+    centerWindow();
+    updateSplitters();
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
 }
+
+void MainWindow::centerWindow()
+{
+    int screen = 0;
+    QWidget *w = window();
+    QDesktopWidget *desktop = QApplication::desktop();
+    if (w) {
+        screen = desktop->screenNumber(w);
+    } else if (desktop->isVirtualDesktop()) {
+        screen = desktop->screenNumber(QCursor::pos());
+    } else {
+        screen = desktop->screenNumber(this);
+    }
+    QRect rect(desktop->availableGeometry(screen));
+    int h = 60*rect.height()/100;
+    QSize nw(w->height(),h);
+    //if (nw.width()<1000) nw.setWidth(80*rect.width()/100);
+    resize(nw);
+    move(rect.width()/2 - frameGeometry().width()/2,
+         rect.height()/2 - frameGeometry().height()/2);
+}
+
+void MainWindow::updateSplitters()
+{
+    ui->splitter->setCollapsible(0,true);
+
+    QList<int> widths;
+    widths.clear();
+    widths << width()-200;
+    widths << 200;
+    ui->splitter->setSizes(widths);
+}
+
 
 void MainWindow::clearRadButtons()
 {
@@ -38,12 +95,7 @@ void MainWindow::renderButtons()
 
     ui->gridRad->setHorizontalSpacing(2);
     ui->gridRad->setVerticalSpacing(2);
-    QFont bf = QApplication::font("QPushButton");
-    bf.setPointSize(14);
     int rmark=0, row=0, clmn=0;
-    QFont bf2 = QApplication::font("QLabel");
-    bf2.setPointSize(12);
-    bf2.setWeight(QFont::Bold);
 
     QWidget *w;
     for (int i=0;i<dict.radicalsLookup.count();i++) {
@@ -51,8 +103,8 @@ void MainWindow::renderButtons()
         w = NULL;
         if (rmark!=ri.strokes) { // insert label
             QLabel *rl = new QLabel(tr("%1").arg(ri.strokes),ui->frameRad);
-            rl->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
-            rl->setFont(bf2);
+            rl->setAlignment(Qt::AlignCenter);
+            rl->setFont(fontLabels);
             rl->setFrameShape(QFrame::Box);
             w = rl;
             rmark=ri.strokes;
@@ -61,13 +113,14 @@ void MainWindow::renderButtons()
         // insert button
         QPushButton *pb = new QPushButton(ri.radical,ui->frameRad);
         pb->setFlat(true);
-        pb->setFont(bf);
+        pb->setFont(fontBtn);
         pb->setCheckable(true);
         if (btnWidth<0) {
             QFontMetrics fm(pb->font());
-            btnWidth = fm.width(QChar(0x9fa0)) + 15;
+            btnWidth = 13*fm.width(QChar(0x9fa0))/10;
         }
         pb->setMinimumWidth(btnWidth);
+        pb->setMinimumHeight(btnWidth);
         connect(pb,SIGNAL(clicked(bool)),this,SLOT(radicalPressed(bool)));
         w = pb;
         insertOneWidget(w,row,clmn);
@@ -89,6 +142,26 @@ void MainWindow::insertOneWidget(QWidget *w, int &row, int &clmn)
     }
 }
 
+void MainWindow::readSettings()
+{
+    QFont fontResL = QApplication::font("QListView");
+    fontResL.setPointSize(14);
+    QFont fontBtnL = QApplication::font("QPushButton");
+    fontBtnL.setPointSize(14);
+    QFont fontBtnLabelL = QApplication::font("QLabel");
+    fontBtnLabelL.setPointSize(12);
+    fontBtnLabelL.setWeight(QFont::Bold);
+
+    QSettings se("kilobax","qjrad");
+    se.beginGroup("Main");
+    fontResults = qvariant_cast<QFont>(se.value("fontResult",fontResL));
+    fontBtn = qvariant_cast<QFont>(se.value("fontButton",fontBtnL));
+    fontLabels = qvariant_cast<QFont>(se.value("fontLabel",fontBtnLabelL));
+    se.endGroup();
+
+    ui->scratchPad->setFont(fontResults);
+}
+
 void MainWindow::resetRadicals()
 {
     allowLookup = false;
@@ -98,6 +171,8 @@ void MainWindow::resetRadicals()
         pb->setChecked(false);
     }
     allowLookup = true;
+    radicalPressed(false);
+    statusMsg->setText(tr("Ready"));
 }
 
 void MainWindow::radicalPressed(bool)
@@ -105,10 +180,12 @@ void MainWindow::radicalPressed(bool)
     if (!allowLookup) return;
     QStringList kl;
     kl.clear();
+    int bpcnt = 0;
     for (int i=0;i<buttons.count();i++) {
         QPushButton *pb = qobject_cast<QPushButton *>(buttons.at(i));
         if (pb==NULL) continue;
         if (pb->isChecked()) {
+            bpcnt++;
             QChar r = pb->text().at(0);
             if (!r.isNull()) {
                 int idx = dict.radicalsLookup.indexOf(QKRadItem(r));
@@ -118,7 +195,6 @@ void MainWindow::radicalPressed(bool)
             }
         }
     }
-    if (kl.isEmpty()) return;
     while (kl.count()>1) {
         QString fs = kl.at(0);
         QString ms = kl.takeLast();
@@ -136,7 +212,90 @@ void MainWindow::radicalPressed(bool)
         }
         kl.replace(0,fs);
     }
-    qDebug() << kl.takeFirst();
+    if (!kl.isEmpty())
+        foundKanji = dict.sortKanji(kl.takeFirst());
+    else
+        foundKanji.clear();
 
+    QItemSelectionModel *m = ui->listKanji->selectionModel();
+    QAbstractItemModel *n = ui->listKanji->model();
+    ui->listKanji->setModel(new QKanjiModel(this,foundKanji,fontResults));
+    m->deleteLater();
+    n->deleteLater();
+    ui->infoKanji->clear();
 
- }
+    if (bpcnt>0)
+        statusMsg->setText(tr("Found %1 kanji").arg(foundKanji.length()));
+    else
+        statusMsg->setText(tr("Ready"));
+}
+
+void MainWindow::settingsDlg()
+{
+    QSettingsDlg *dlg = new QSettingsDlg(this,fontBtn,fontLabels,fontResults);
+    if (dlg->exec()) {
+        fontBtn = dlg->fontBtn;
+        fontLabels = dlg->fontLabels;
+        fontResults = dlg->fontResults;
+        renderButtons();
+        ui->scratchPad->setFont(fontResults);
+    }
+    dlg->setParent(NULL);
+    delete dlg;
+}
+
+void MainWindow::kanjiClicked(const QModelIndex &index)
+{
+    ui->infoKanji->clear();
+    if (!index.isValid()) return;
+    if (index.row()>=foundKanji.length()) return;
+    QChar k = foundKanji.at(index.row());
+    if (!dict.kanjiInfo.contains(k)) {
+        ui->infoKanji->setText(tr("Kanji %1 not found in dictionary.").arg(k));
+        return;
+    }
+    QString msg;
+    QKanjiInfo ki = dict.kanjiInfo[k];
+    msg = tr("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">");
+    msg += tr("<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">");
+    msg += tr("p, li { white-space: pre-wrap; }");
+    msg += tr("</style></head><body style=\" font-family:'%1'; font-size:%2pt; font-weight:400; font-style:normal;\">").
+            arg(QApplication::font("QTextBrowser").family()).
+            arg(QApplication::font("QTextBrowser").pointSize());
+    msg += tr("<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'%1'; font-size:36pt;\">%2</span></p>").arg(fontResults.family()).arg(ki.kanji);
+    msg += tr("<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p>");
+    msg += tr("<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">Strokes:</span> %1</p>").arg(ki.strokes);
+    msg += tr("<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">Parts:</span> %1</p>").arg(ki.parts.join(tr(" ")));
+    msg += tr("<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p>");
+    msg += tr("<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">On:</span> %1</p>").arg(ki.onReading.join(tr(", ")));
+    msg += tr("<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">Kun:</span> %1</p>").arg(ki.kunReading.join(tr(", ")));
+    msg += tr("<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p>");
+    msg += tr("<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">Meaning:</span> %1</p>").arg(ki.meaning.join(tr(", ")));
+    msg += tr("</body></html>");
+
+    ui->infoKanji->setHtml(msg);
+}
+
+void MainWindow::kanjiAdd(const QModelIndex &index)
+{
+    if (!index.isValid()) return;
+    if (index.row()>=foundKanji.length()) return;
+    QChar k = foundKanji.at(index.row());
+    ui->scratchPad->setText(ui->scratchPad->text()+k);
+}
+
+void MainWindow::closeEvent(QCloseEvent * event)
+{
+    writeSettings();
+    event->accept();
+}
+
+void MainWindow::writeSettings()
+{
+    QSettings se("kilobax","qjrad");
+    se.beginGroup("Main");
+    se.setValue("fontResult",fontResults);
+    se.setValue("fontButton",fontBtn);
+    se.setValue("fontLabel",fontLabels);
+    se.endGroup();
+}
