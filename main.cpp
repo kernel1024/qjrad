@@ -5,6 +5,7 @@
 int main(int argc, char *argv[])
 {
     qRegisterMetaType<QKRadItem>("QKRadItem");
+    qRegisterMetaType<QKanjiInfo>("QKanjiInfo");
 
     QApplication a(argc, argv);
     MainWindow w;

@@ -12,12 +12,17 @@ TEMPLATE = app
 
 SOURCES += main.cpp\
         mainwindow.cpp \
-    kdictionary.cpp
+    kdictionary.cpp \
+    kanjimodel.cpp \
+    settingsdlg.cpp
 
 HEADERS  += mainwindow.h \
-    kdictionary.h
+    kdictionary.h \
+    kanjimodel.h \
+    settingsdlg.h
 
-FORMS    += mainwindow.ui
+FORMS    += mainwindow.ui \
+    settingsdlg.ui
 
 RESOURCES += \
     qjrad.qrc

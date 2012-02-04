@@ -22,19 +22,38 @@ public:
     bool operator >(const QKRadItem &ref);
 };
 
+class QKanjiInfo
+{
+public:
+    QChar kanji;
+    int strokes;
+    QStringList parts;
+    QStringList onReading;
+    QStringList kunReading;
+    QStringList meaning;
+    QKanjiInfo();
+    QKanjiInfo(const QChar &aKanji, int aStrokes, const QStringList &aParts,
+               const QStringList &aOnReading, const QStringList &aKunReading, const QStringList &aMeaning);
+    QKanjiInfo &operator=(const QKanjiInfo &other);
+    bool operator==(const QKanjiInfo &s) const;
+    bool operator!=(const QKanjiInfo &s) const;
+    bool isEmpty();
+};
+
 class QKDictionary : public QObject
 {
     Q_OBJECT
 public:
     QList<QKRadItem> radicalsLookup;
-    QDomDocument kanjiDict;
-    QHash<QChar,int> kanjiStrokes;
+    QHash<QChar,QKanjiInfo> kanjiInfo;
+    QHash<QChar,QStringList> kanjiParts;
 
+    QString errorString;
 
     explicit QKDictionary(QObject *parent = 0);
 
     bool loadDictionaries();
-
+    QString sortKanji(const QString src);
 
 signals:
 

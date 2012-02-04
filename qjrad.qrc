@@ -2,5 +2,11 @@
     <qresource prefix="/">
         <file>data/radkfilex</file>
         <file>data/kanjidic2.xml</file>
+        <file>data/kradfilex</file>
+        <file>data/appicon22.png</file>
+        <file>data/appicon32.png</file>
+        <file>data/appicon48.png</file>
+        <file>data/appicon64.png</file>
+        <file>data/appicon128.png</file>
     </qresource>
 </RCC>
