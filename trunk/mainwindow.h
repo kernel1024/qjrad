@@ -28,6 +28,7 @@ private:
     QObjectList buttons;
     bool allowLookup;
     QLabel *statusMsg;
+    int maxHButtons;
     void centerWindow();
     void insertOneWidget(QWidget *w, int &row, int &clmn);
     void readSettings();
