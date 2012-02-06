@@ -130,36 +130,15 @@ void MainWindow::renderButtons()
 
 void MainWindow::insertOneWidget(QWidget *w, int &row, int &clmn)
 {
-    const int maxClmn = 30;
     if (w!=NULL) {
         ui->gridRad->addWidget(w,row,clmn);
         buttons << w;
         clmn++;
-        if (clmn>=maxClmn) {
+        if (clmn>=maxHButtons) {
             clmn=0;
             row++;
         }
     }
-}
-
-void MainWindow::readSettings()
-{
-    QFont fontResL = QApplication::font("QListView");
-    fontResL.setPointSize(14);
-    QFont fontBtnL = QApplication::font("QPushButton");
-    fontBtnL.setPointSize(14);
-    QFont fontBtnLabelL = QApplication::font("QLabel");
-    fontBtnLabelL.setPointSize(12);
-    fontBtnLabelL.setWeight(QFont::Bold);
-
-    QSettings se("kilobax","qjrad");
-    se.beginGroup("Main");
-    fontResults = qvariant_cast<QFont>(se.value("fontResult",fontResL));
-    fontBtn = qvariant_cast<QFont>(se.value("fontButton",fontBtnL));
-    fontLabels = qvariant_cast<QFont>(se.value("fontLabel",fontBtnLabelL));
-    se.endGroup();
-
-    ui->scratchPad->setFont(fontResults);
 }
 
 void MainWindow::resetRadicals()
@@ -230,20 +209,6 @@ void MainWindow::radicalPressed(bool)
         statusMsg->setText(tr("Ready"));
 }
 
-void MainWindow::settingsDlg()
-{
-    QSettingsDlg *dlg = new QSettingsDlg(this,fontBtn,fontLabels,fontResults);
-    if (dlg->exec()) {
-        fontBtn = dlg->fontBtn;
-        fontLabels = dlg->fontLabels;
-        fontResults = dlg->fontResults;
-        renderButtons();
-        ui->scratchPad->setFont(fontResults);
-    }
-    dlg->setParent(NULL);
-    delete dlg;
-}
-
 void MainWindow::kanjiClicked(const QModelIndex &index)
 {
     ui->infoKanji->clear();
@@ -262,14 +227,14 @@ void MainWindow::kanjiClicked(const QModelIndex &index)
     msg += tr("</style></head><body style=\" font-family:'%1'; font-size:%2pt; font-weight:400; font-style:normal;\">").
             arg(QApplication::font("QTextBrowser").family()).
             arg(QApplication::font("QTextBrowser").pointSize());
-    msg += tr("<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'%1'; font-size:36pt;\">%2</span></p>").arg(fontResults.family()).arg(ki.kanji);
-    msg += tr("<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p>");
+    msg += tr("<p style=\" margin-top:0px; margin-bottom:10px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'%1'; font-size:36pt;\">%2</span></p>").arg(fontResults.family()).arg(ki.kanji);
+
     msg += tr("<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">Strokes:</span> %1</p>").arg(ki.strokes);
-    msg += tr("<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">Parts:</span> %1</p>").arg(ki.parts.join(tr(" ")));
-    msg += tr("<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p>");
+    msg += tr("<p style=\" margin-top:0px; margin-bottom:10px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">Parts:</span> %1</p>").arg(ki.parts.join(tr(" ")));
+
     msg += tr("<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">On:</span> %1</p>").arg(ki.onReading.join(tr(", ")));
-    msg += tr("<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">Kun:</span> %1</p>").arg(ki.kunReading.join(tr(", ")));
-    msg += tr("<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p>");
+    msg += tr("<p style=\" margin-top:0px; margin-bottom:10px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">Kun:</span> %1</p>").arg(ki.kunReading.join(tr(", ")));
+
     msg += tr("<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">Meaning:</span> %1</p>").arg(ki.meaning.join(tr(", ")));
     msg += tr("</body></html>");
 
@@ -290,6 +255,42 @@ void MainWindow::closeEvent(QCloseEvent * event)
     event->accept();
 }
 
+void MainWindow::settingsDlg()
+{
+    QSettingsDlg *dlg = new QSettingsDlg(this,fontBtn,fontLabels,fontResults,maxHButtons);
+    if (dlg->exec()) {
+        fontBtn = dlg->fontBtn;
+        fontLabels = dlg->fontLabels;
+        fontResults = dlg->fontResults;
+        maxHButtons = dlg->maxHButtons;
+        renderButtons();
+        ui->scratchPad->setFont(fontResults);
+    }
+    dlg->setParent(NULL);
+    delete dlg;
+}
+
+void MainWindow::readSettings()
+{
+    QFont fontResL = QApplication::font("QListView");
+    fontResL.setPointSize(14);
+    QFont fontBtnL = QApplication::font("QPushButton");
+    fontBtnL.setPointSize(14);
+    QFont fontBtnLabelL = QApplication::font("QLabel");
+    fontBtnLabelL.setPointSize(12);
+    fontBtnLabelL.setWeight(QFont::Bold);
+
+    QSettings se("kilobax","qjrad");
+    se.beginGroup("Main");
+    fontResults = qvariant_cast<QFont>(se.value("fontResult",fontResL));
+    fontBtn = qvariant_cast<QFont>(se.value("fontButton",fontBtnL));
+    fontLabels = qvariant_cast<QFont>(se.value("fontLabel",fontBtnLabelL));
+    maxHButtons = se.value("maxHButtons",30).toInt();
+    se.endGroup();
+
+    ui->scratchPad->setFont(fontResults);
+}
+
 void MainWindow::writeSettings()
 {
     QSettings se("kilobax","qjrad");
@@ -297,5 +298,6 @@ void MainWindow::writeSettings()
     se.setValue("fontResult",fontResults);
     se.setValue("fontButton",fontBtn);
     se.setValue("fontLabel",fontLabels);
+    se.setValue("maxHButtons",maxHButtons);
     se.endGroup();
 }

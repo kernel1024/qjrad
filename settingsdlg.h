@@ -4,7 +4,7 @@
 #include <QDialog>
 
 namespace Ui {
-class QSettingsDlg;
+    class QSettingsDlg;
 }
 
 class QSettingsDlg : public QDialog
@@ -13,7 +13,9 @@ class QSettingsDlg : public QDialog
     
 public:
     QFont fontBtn, fontLabels, fontResults;
-    explicit QSettingsDlg(QWidget *parent, const QFont &fBtn, const QFont &fLabels, const QFont &fResults);
+    int maxHButtons;
+    explicit QSettingsDlg(QWidget *parent, const QFont &fBtn, const QFont &fLabels, const QFont &fResults,
+                          int aMaxHButtons);
     ~QSettingsDlg();
     
 private:
@@ -22,6 +24,7 @@ private:
 
 public slots:
     void changeFont();
+    void cntChanged(int i);
 };
 
 #endif // SETTINGSDLG_H

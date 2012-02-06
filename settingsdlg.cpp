@@ -3,7 +3,8 @@
 #include "ui_settingsdlg.h"
 
 
-QSettingsDlg::QSettingsDlg(QWidget *parent, const QFont &fBtn, const QFont &fLabels, const QFont &fResults) :
+QSettingsDlg::QSettingsDlg(QWidget *parent, const QFont &fBtn, const QFont &fLabels, const QFont &fResults,
+                           int aMaxHButtons) :
     QDialog(parent),
     ui(new Ui::QSettingsDlg)
 {
@@ -11,9 +12,12 @@ QSettingsDlg::QSettingsDlg(QWidget *parent, const QFont &fBtn, const QFont &fLab
     fontBtn = fBtn;
     fontLabels = fLabels;
     fontResults = fResults;
+    maxHButtons = aMaxHButtons;
+    ui->buttonsCnt->setValue(maxHButtons);
     connect(ui->btnFontButtons,SIGNAL(clicked()),this,SLOT(changeFont()));
     connect(ui->btnFontLabels,SIGNAL(clicked()),this,SLOT(changeFont()));
     connect(ui->btnFontResults,SIGNAL(clicked()),this,SLOT(changeFont()));
+    connect(ui->buttonsCnt,SIGNAL(valueChanged(int)),this,SLOT(cntChanged(int)));
     updateFonts();
 }
 
@@ -53,4 +57,9 @@ void QSettingsDlg::changeFont()
     else if (pb==ui->btnFontResults)
         fontResults = f;
     updateFonts();
+}
+
+void QSettingsDlg::cntChanged(int i)
+{
+    maxHButtons = i;
 }
