@@ -158,7 +158,11 @@ bool kanjiLessThan(const QChar &c1, const QChar &c2)
 {
     if (kdict==NULL) return (c1<c2);
     if (!kdict->kanjiInfo.contains(c1) || !kdict->kanjiInfo.contains(c2)) return (c1<c2);
-    return (kdict->kanjiInfo[c1].strokes<kdict->kanjiInfo[c2].strokes);
+    if (kdict->kanjiInfo[c1].strokes!=kdict->kanjiInfo[c2].strokes)
+        return (kdict->kanjiInfo[c1].strokes<kdict->kanjiInfo[c2].strokes);
+    else
+        return (c1<c2);
+
 }
 
 QString QKDictionary::sortKanji(const QString src)
