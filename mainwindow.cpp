@@ -101,7 +101,8 @@ void MainWindow::renderButtons()
     for (int i=0;i<dict.radicalsLookup.count();i++) {
         QKRadItem ri = dict.radicalsLookup.at(i);
         w = NULL;
-        if (rmark!=ri.strokes) { // insert label
+        if (rmark!=ri.strokes) {
+            // insert label
             QLabel *rl = new QLabel(tr("%1").arg(ri.strokes),ui->frameRad);
             rl->setAlignment(Qt::AlignCenter);
             rl->setFont(fontLabels);
@@ -115,6 +116,11 @@ void MainWindow::renderButtons()
         pb->setFlat(true);
         pb->setFont(fontBtn);
         pb->setCheckable(true);
+        // qt 4.8 bug with kde color configuration tool. disabled color is still incorrect, use our specific color
+        QPalette p = pb->palette();
+        p.setBrush(QPalette::Disabled,QPalette::ButtonText,QBrush(Qt::gray));
+        pb->setPalette(p);
+        // ----
         if (btnWidth<0) {
             QFontMetrics fm(pb->font());
             btnWidth = 13*fm.width(QChar(0x9fa0))/10;
@@ -148,6 +154,7 @@ void MainWindow::resetRadicals()
         QPushButton *pb = qobject_cast<QPushButton *>(buttons.at(i));
         if (pb==NULL) continue;
         pb->setChecked(false);
+        pb->setEnabled(true);
     }
     allowLookup = true;
     radicalPressed(false);
@@ -157,15 +164,22 @@ void MainWindow::resetRadicals()
 void MainWindow::radicalPressed(bool)
 {
     if (!allowLookup) return;
+
+    QList<QPushButton *> pbl;
+    pbl.clear();
+    for (int i=0;i<buttons.count();i++)
+        if (qobject_cast<QPushButton *>(buttons.at(i))!=NULL)
+            pbl << qobject_cast<QPushButton *>(buttons.at(i));
+
     QStringList kl;
     kl.clear();
     int bpcnt = 0;
-    for (int i=0;i<buttons.count();i++) {
-        QPushButton *pb = qobject_cast<QPushButton *>(buttons.at(i));
-        if (pb==NULL) continue;
+    for (int i=0;i<pbl.count();i++) {
+        QPushButton *pb = pbl.at(i);
+        QChar r = pb->text().at(0);
+        pb->setEnabled(true);
         if (pb->isChecked()) {
             bpcnt++;
-            QChar r = pb->text().at(0);
             if (!r.isNull()) {
                 int idx = dict.radicalsLookup.indexOf(QKRadItem(r));
                 if (idx>=0) {
@@ -191,10 +205,30 @@ void MainWindow::radicalPressed(bool)
         }
         kl.replace(0,fs);
     }
-    if (!kl.isEmpty())
+
+    if (!kl.isEmpty()) {
+        // sort kanji by radicals weight and by unicode weight
         foundKanji = dict.sortKanji(kl.takeFirst());
-    else
+        // disable radicals that not appears on found set entirely
+        QList<QChar> ards;
+        ards.clear();
+        for (int i=0;i<foundKanji.length();i++) {
+            QChar kj = foundKanji.at(i);
+            if (dict.kanjiParts.contains(kj)) {
+                QString krad = dict.kanjiParts[kj].join("");
+                for (int j=0;j<krad.length();j++) {
+                    if (!ards.contains(krad.at(j)))
+                        ards << krad.at(j);
+                }
+            }
+        }
+        for (int i=0;i<pbl.count();i++) {
+            if (!ards.contains(pbl.at(i)->text().at(0)))
+                pbl.at(i)->setEnabled(false);
+        }
+    } else {
         foundKanji.clear();
+    }
 
     QItemSelectionModel *m = ui->listKanji->selectionModel();
     QAbstractItemModel *n = ui->listKanji->model();
