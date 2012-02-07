@@ -24,6 +24,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     foundKanji.clear();
     geomFirstWinPos = false;
+    savedSplitterPos = 200;
 
     statusMsg = new QLabel(tr("Ready"));
     statusMsg->setMinimumWidth(150);
