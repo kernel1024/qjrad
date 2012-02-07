@@ -2,6 +2,7 @@
 #include "ui_mainwindow.h"
 #include "kanjimodel.h"
 #include "settingsdlg.h"
+#include "miscutils.h"
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -22,6 +23,7 @@ MainWindow::MainWindow(QWidget *parent) :
     setWindowIcon(appicon);
 
     foundKanji.clear();
+    geomFirstWinPos = false;
 
     statusMsg = new QLabel(tr("Ready"));
     statusMsg->setMinimumWidth(150);
@@ -50,6 +52,12 @@ MainWindow::~MainWindow()
 
 void MainWindow::centerWindow()
 {
+    if (geomFirstWinPos) {
+        move(savedWinPos);
+        resize(savedWinSize);
+        geomFirstWinPos = false;
+        return;
+    }
     int screen = 0;
     QWidget *w = window();
     QDesktopWidget *desktop = QApplication::desktop();
@@ -62,8 +70,8 @@ void MainWindow::centerWindow()
     }
     QRect rect(desktop->availableGeometry(screen));
     int h = 60*rect.height()/100;
+    if (h<650) h = qMin(650,75*rect.height()/100);
     QSize nw(w->height(),h);
-    //if (nw.width()<1000) nw.setWidth(80*rect.width()/100);
     resize(nw);
     move(rect.width()/2 - frameGeometry().width()/2,
          rect.height()/2 - frameGeometry().height()/2);
@@ -75,11 +83,10 @@ void MainWindow::updateSplitters()
 
     QList<int> widths;
     widths.clear();
-    widths << width()-200;
-    widths << 200;
+    widths << width()-savedSplitterPos;
+    widths << savedSplitterPos;
     ui->splitter->setSizes(widths);
 }
-
 
 void MainWindow::clearRadButtons()
 {
@@ -118,7 +125,9 @@ void MainWindow::renderButtons()
         pb->setCheckable(true);
         // qt 4.8 bug with kde color configuration tool. disabled color is still incorrect, use our specific color
         QPalette p = pb->palette();
-        p.setBrush(QPalette::Disabled,QPalette::ButtonText,QBrush(Qt::gray));
+        p.setBrush(QPalette::Disabled,QPalette::ButtonText,QBrush(
+                       middleColor(QApplication::palette("QPushButton").color(QPalette::Button),
+                                   QApplication::palette("QPushButton").color(QPalette::ButtonText),25)));
         pb->setPalette(p);
         // ----
         if (btnWidth<0) {
@@ -127,6 +136,7 @@ void MainWindow::renderButtons()
         }
         pb->setMinimumWidth(btnWidth);
         pb->setMinimumHeight(btnWidth);
+        pb->setMaximumHeight(btnWidth+2);
         connect(pb,SIGNAL(clicked(bool)),this,SLOT(radicalPressed(bool)));
         w = pb;
         insertOneWidget(w,row,clmn);
@@ -232,7 +242,7 @@ void MainWindow::radicalPressed(bool)
 
     QItemSelectionModel *m = ui->listKanji->selectionModel();
     QAbstractItemModel *n = ui->listKanji->model();
-    ui->listKanji->setModel(new QKanjiModel(this,foundKanji,fontResults));
+    ui->listKanji->setModel(new QKanjiModel(this,foundKanji,fontResults, &(dict.kanjiInfo)));
     m->deleteLater();
     n->deleteLater();
     ui->infoKanji->clear();
@@ -264,7 +274,8 @@ void MainWindow::kanjiClicked(const QModelIndex &index)
     msg += tr("<p style=\" margin-top:0px; margin-bottom:10px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'%1'; font-size:36pt;\">%2</span></p>").arg(fontResults.family()).arg(ki.kanji);
 
     msg += tr("<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">Strokes:</span> %1</p>").arg(ki.strokes);
-    msg += tr("<p style=\" margin-top:0px; margin-bottom:10px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">Parts:</span> %1</p>").arg(ki.parts.join(tr(" ")));
+    msg += tr("<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">Parts:</span> %1</p>").arg(ki.parts.join(tr(" ")));
+    msg += tr("<p style=\" margin-top:0px; margin-bottom:10px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">Grade:</span> %1</p>").arg(ki.grade);
 
     msg += tr("<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">On:</span> %1</p>").arg(ki.onReading.join(tr(", ")));
     msg += tr("<p style=\" margin-top:0px; margin-bottom:10px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">Kun:</span> %1</p>").arg(ki.kunReading.join(tr(", ")));
@@ -297,7 +308,10 @@ void MainWindow::settingsDlg()
         fontLabels = dlg->fontLabels;
         fontResults = dlg->fontResults;
         maxHButtons = dlg->maxHButtons;
+        allowLookup = false;
         renderButtons();
+        allowLookup = true;
+        resetRadicals();
         ui->scratchPad->setFont(fontResults);
     }
     dlg->setParent(NULL);
@@ -321,6 +335,14 @@ void MainWindow::readSettings()
     fontLabels = qvariant_cast<QFont>(se.value("fontLabel",fontBtnLabelL));
     maxHButtons = se.value("maxHButtons",30).toInt();
     se.endGroup();
+    se.beginGroup("Geometry");
+    savedWinPos = se.value("winPos",QPoint(20,20)).toPoint();
+    savedWinSize = se.value("winSize",QSize(200,200)).toSize();
+    geomFirstWinPos = true;
+    bool okconv;
+    savedSplitterPos = se.value("splitterPos",200).toInt(&okconv);
+    if (!okconv) savedSplitterPos = 200;
+    se.endGroup();
 
     ui->scratchPad->setFont(fontResults);
 }
@@ -333,5 +355,13 @@ void MainWindow::writeSettings()
     se.setValue("fontButton",fontBtn);
     se.setValue("fontLabel",fontLabels);
     se.setValue("maxHButtons",maxHButtons);
+    se.endGroup();
+    se.beginGroup("Geometry");
+    se.setValue("winPos",pos());
+    se.setValue("winSize",size());
+    QList<int> szs = ui->splitter->sizes();
+    int ssz = 200;
+    if (szs.count()>=2) ssz = szs[1];
+    se.setValue("splitterPos",ssz);
     se.endGroup();
 }

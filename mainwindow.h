@@ -29,14 +29,22 @@ private:
     bool allowLookup;
     QLabel *statusMsg;
     int maxHButtons;
-    void centerWindow();
+    // geometry restore
+    bool geomFirstWinPos;
+    QPoint savedWinPos;
+    QSize savedWinSize;
+    int savedSplitterPos;
+    // ---
     void insertOneWidget(QWidget *w, int &row, int &clmn);
-    void readSettings();
-    void writeSettings();
     void closeEvent(QCloseEvent * event);
-    void updateSplitters();
 
 public slots:
+    // window geometry and misc
+    void centerWindow();
+    void readSettings();
+    void writeSettings();
+    void updateSplitters();
+    // event handlers
     void resetRadicals();
     void radicalPressed(bool checked);
     void settingsDlg();
