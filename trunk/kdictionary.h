@@ -31,9 +31,11 @@ public:
     QStringList onReading;
     QStringList kunReading;
     QStringList meaning;
+    int grade;
     QKanjiInfo();
     QKanjiInfo(const QChar &aKanji, int aStrokes, const QStringList &aParts,
-               const QStringList &aOnReading, const QStringList &aKunReading, const QStringList &aMeaning);
+               const QStringList &aOnReading, const QStringList &aKunReading, const QStringList &aMeaning,
+               int aGrade);
     QKanjiInfo &operator=(const QKanjiInfo &other);
     bool operator==(const QKanjiInfo &s) const;
     bool operator!=(const QKanjiInfo &s) const;

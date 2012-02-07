@@ -14,18 +14,22 @@ SOURCES += main.cpp\
         mainwindow.cpp \
     kdictionary.cpp \
     kanjimodel.cpp \
-    settingsdlg.cpp
+    settingsdlg.cpp \
+    miscutils.cpp
 
 HEADERS  += mainwindow.h \
     kdictionary.h \
     kanjimodel.h \
-    settingsdlg.h
+    settingsdlg.h \
+    miscutils.h
 
 FORMS    += mainwindow.ui \
     settingsdlg.ui
 
 RESOURCES += \
     qjrad.qrc
+
+
 
 
 
