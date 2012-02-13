@@ -11,15 +11,18 @@ class QKanjiModel : public QAbstractListModel
     Q_OBJECT
 private:
     QString kanjiList;
-    QFont kanjiFont;
+    QFont kanjiFont, markFont;
     QHash<QChar,QKanjiInfo> *kanjiInfo;
+
+    void createHxBox(QVector<QLine> &rrct, int sz, int hv = 2) const;
 
 public:
     explicit QKanjiModel(QObject *parent, const QString &KanjiList, const QFont &KanjiFont,
-                         QHash<QChar,QKanjiInfo> *KanjiInfo);
+                         const QFont &MarkFont, QHash<QChar,QKanjiInfo> *KanjiInfo);
     Qt::ItemFlags flags(const QModelIndex & index) const;
     QVariant data(const QModelIndex & index, int role = Qt::DisplayRole) const;
     int rowCount( const QModelIndex & parent = QModelIndex()) const;
+    static bool isRegularKanji(QChar k);
 signals:
     
 public slots:
