@@ -51,13 +51,13 @@ QVariant QKanjiModel::data(const QModelIndex &index, int role) const
             createHxBox(rrct,sz,3);
             pn.drawLines(rrct);
             pn.setPen(QPen(fgd));
-            pn.drawText(0,0,sz,sz,Qt::AlignCenter,tr("%1").arg(v));
+            pn.drawText(0,0,sz-1,sz-1,Qt::AlignCenter,tr("%1").arg(v));
         } else { // this is regular kanji
             if ((*kanjiInfo)[k].grade<=8)
                 pn.setPen(QPen(fgd));
             else
                 pn.setPen(QPen(njfgd));
-            pn.drawText(0,0,sz,sz,Qt::AlignCenter,k);
+            pn.drawText(0,0,sz-1,sz-1,Qt::AlignCenter,k);
         }
         return px;
     }
