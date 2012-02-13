@@ -237,13 +237,24 @@ void MainWindow::radicalPressed(bool)
             if (!ards.contains(pbl.at(i)->text().at(0)))
                 pbl.at(i)->setEnabled(false);
         }
+        // insert unselectable labels between kanji groups with different stroke count
+        int idx = 0;
+        int prevsc = 0;
+        while (idx<foundKanji.length()) {
+            if (prevsc!=dict.kanjiInfo[foundKanji.at(idx)].strokes) {
+                prevsc = dict.kanjiInfo[foundKanji.at(idx)].strokes;
+                foundKanji.insert(idx,QChar(0x2460+prevsc)); // use enclosed numerics set from unicode
+                idx++;
+            }
+            idx++;
+        }
     } else {
         foundKanji.clear();
     }
 
     QItemSelectionModel *m = ui->listKanji->selectionModel();
     QAbstractItemModel *n = ui->listKanji->model();
-    ui->listKanji->setModel(new QKanjiModel(this,foundKanji,fontResults, &(dict.kanjiInfo)));
+    ui->listKanji->setModel(new QKanjiModel(this,foundKanji,fontResults,fontLabels, &(dict.kanjiInfo)));
     m->deleteLater();
     n->deleteLater();
     ui->infoKanji->clear();
@@ -256,10 +267,11 @@ void MainWindow::radicalPressed(bool)
 
 void MainWindow::kanjiClicked(const QModelIndex &index)
 {
-    ui->infoKanji->clear();
     if (!index.isValid()) return;
     if (index.row()>=foundKanji.length()) return;
     QChar k = foundKanji.at(index.row());
+    if (!QKanjiModel::isRegularKanji(k)) return;
+    ui->infoKanji->clear();
     if (!dict.kanjiInfo.contains(k)) {
         ui->infoKanji->setText(tr("Kanji %1 not found in dictionary.").arg(k));
         return;
@@ -292,6 +304,7 @@ void MainWindow::kanjiAdd(const QModelIndex &index)
     if (!index.isValid()) return;
     if (index.row()>=foundKanji.length()) return;
     QChar k = foundKanji.at(index.row());
+    if (!QKanjiModel::isRegularKanji(k)) return;
     ui->scratchPad->setText(ui->scratchPad->text()+k);
 }
 
