@@ -342,7 +342,7 @@ void MainWindow::readSettings()
     fontBtnLabelL.setPointSize(12);
     fontBtnLabelL.setWeight(QFont::Bold);
 
-    QSettings se("kilobax","qjrad");
+    QSettings se("kernel1024","qjrad");
     se.beginGroup("Main");
     fontResults = qvariant_cast<QFont>(se.value("fontResult",fontResL));
     fontBtn = qvariant_cast<QFont>(se.value("fontButton",fontBtnL));
@@ -363,7 +363,7 @@ void MainWindow::readSettings()
 
 void MainWindow::writeSettings()
 {
-    QSettings se("kilobax","qjrad");
+    QSettings se("kernel1024","qjrad");
     se.beginGroup("Main");
     se.setValue("fontResult",fontResults);
     se.setValue("fontButton",fontBtn);
