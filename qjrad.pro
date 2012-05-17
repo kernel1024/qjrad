@@ -29,6 +29,13 @@ FORMS    += mainwindow.ui \
 RESOURCES += \
     qjrad.qrc
 
+SUBDIRS += kanjiconv
+
+OTHER_FILES += \
+    kanjiconv/kanjiconv.pro \
+    kanjiconv/main.cpp \
+    kanjiconv/convertdicts
+
 
 
 

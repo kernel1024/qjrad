@@ -2,7 +2,7 @@
 #define KANJIMODEL_H
 
 #include <QtGui>
-#include "kdictionary.h"
+#include "mainwindow.h"
 
 class MainWindow;
 
@@ -12,13 +12,13 @@ class QKanjiModel : public QAbstractListModel
 private:
     QString kanjiList;
     QFont kanjiFont, markFont;
-    QHash<QChar,QKanjiInfo> *kanjiInfo;
+    MainWindow* mainWnd;
 
     void createHxBox(QVector<QLine> &rrct, int sz, int hv = 2) const;
 
 public:
     explicit QKanjiModel(QObject *parent, const QString &KanjiList, const QFont &KanjiFont,
-                         const QFont &MarkFont, QHash<QChar,QKanjiInfo> *KanjiInfo);
+                         const QFont &MarkFont);
     Qt::ItemFlags flags(const QModelIndex & index) const;
     QVariant data(const QModelIndex & index, int role = Qt::DisplayRole) const;
     int rowCount( const QModelIndex & parent = QModelIndex()) const;

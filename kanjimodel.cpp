@@ -2,12 +2,12 @@
 #include "miscutils.h"
 
 QKanjiModel::QKanjiModel(QObject *parent, const QString &KanjiList, const QFont &KanjiFont,
-                         const QFont &MarkFont, QHash<QChar,QKanjiInfo> *KanjiInfo) :
+                         const QFont &MarkFont) :
     QAbstractListModel(parent)
 {
     kanjiList = KanjiList;
     kanjiFont = KanjiFont;
-    kanjiInfo = KanjiInfo;
+    mainWnd = qobject_cast<MainWindow *>(parent);
     markFont = MarkFont;
 }
 
@@ -53,7 +53,7 @@ QVariant QKanjiModel::data(const QModelIndex &index, int role) const
             pn.setPen(QPen(fgd));
             pn.drawText(0,0,sz-1,sz-1,Qt::AlignCenter,tr("%1").arg(v));
         } else { // this is regular kanji
-            if ((*kanjiInfo)[k].grade<=8)
+            if (mainWnd->getKanjiGrade(k)<=8)
                 pn.setPen(QPen(fgd));
             else
                 pn.setPen(QPen(njfgd));
