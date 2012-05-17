@@ -2,7 +2,6 @@
 #define KDICTIONARY_H
 
 #include <QtCore>
-#include <QtXml>
 
 class QKRadItem
 {
