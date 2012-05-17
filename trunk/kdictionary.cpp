@@ -106,6 +106,7 @@ QKanjiInfo QKDictionary::getKanjiInfo(const QChar &kanji)
 bool QKDictionary::loadKanjiDict()
 {
     QDir::setSearchPaths("kanjidict",QProcessEnvironment::systemEnvironment().value("PATH").split(':'));
+    QDir::addSearchPath("kanjidict",QCoreApplication::applicationDirPath());
     QDir::addSearchPath("kanjidict",QDir::currentPath());
     QDir::addSearchPath("kanjidict","/usr/share/qjrad");
     QDir::addSearchPath("kanjidict","/usr/local/share/qjrad");
