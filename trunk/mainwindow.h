@@ -14,7 +14,6 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    QKDictionary dict;
     QFont fontResults, fontBtn, fontLabels;
     QString foundKanji;
 
@@ -23,6 +22,10 @@ public:
 
     void renderButtons();
     void clearRadButtons();
+    int getKanjiGrade(const QChar &kanji);
+protected:
+    QKDictionary dict;
+
 private:
     Ui::MainWindow *ui;
     QObjectList buttons;
@@ -46,7 +49,7 @@ public slots:
     void updateSplitters();
     // event handlers
     void resetRadicals();
-    void radicalPressed(bool checked);
+    void radicalPressed(const bool checked);
     void settingsDlg();
     void kanjiClicked(const QModelIndex & index);
     void kanjiAdd(const QModelIndex & index);

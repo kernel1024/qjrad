@@ -1,7 +1,6 @@
 <RCC>
     <qresource prefix="/">
         <file>data/radkfilex</file>
-        <file>data/kanjidic2.xml</file>
         <file>data/kradfilex</file>
         <file>data/appicon22.png</file>
         <file>data/appicon32.png</file>

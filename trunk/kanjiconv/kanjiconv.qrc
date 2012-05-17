@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/">
+        <file>../data/radkfilex</file>
+        <file>../data/kanjidic2.xml</file>
+        <file>../data/kradfilex</file>
+    </qresource>
+</RCC>

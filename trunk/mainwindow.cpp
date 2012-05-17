@@ -95,6 +95,14 @@ void MainWindow::clearRadButtons()
         buttons.takeFirst()->deleteLater();
 }
 
+int MainWindow::getKanjiGrade(const QChar &kanji)
+{
+    if (dict.kanjiGrade.contains(kanji))
+        return dict.kanjiGrade.value(kanji);
+    else
+        return 0;
+}
+
 void MainWindow::renderButtons()
 {
     int btnWidth = -1;
@@ -172,7 +180,7 @@ void MainWindow::resetRadicals()
     statusMsg->setText(tr("Ready"));
 }
 
-void MainWindow::radicalPressed(bool)
+void MainWindow::radicalPressed(const bool)
 {
     if (!allowLookup) return;
 
@@ -241,8 +249,8 @@ void MainWindow::radicalPressed(bool)
         int idx = 0;
         int prevsc = 0;
         while (idx<foundKanji.length()) {
-            if (prevsc!=dict.kanjiInfo[foundKanji.at(idx)].strokes) {
-                prevsc = dict.kanjiInfo[foundKanji.at(idx)].strokes;
+            if (prevsc!=dict.kanjiStrokes[foundKanji.at(idx)]) {
+                prevsc = dict.kanjiStrokes[foundKanji.at(idx)];
                 foundKanji.insert(idx,QChar(0x2460+prevsc)); // use enclosed numerics set from unicode
                 idx++;
             }
@@ -254,7 +262,7 @@ void MainWindow::radicalPressed(bool)
 
     QItemSelectionModel *m = ui->listKanji->selectionModel();
     QAbstractItemModel *n = ui->listKanji->model();
-    ui->listKanji->setModel(new QKanjiModel(this,foundKanji,fontResults,fontLabels, &(dict.kanjiInfo)));
+    ui->listKanji->setModel(new QKanjiModel(this,foundKanji,fontResults,fontLabels));
     m->deleteLater();
     n->deleteLater();
     ui->infoKanji->clear();
@@ -272,12 +280,14 @@ void MainWindow::kanjiClicked(const QModelIndex &index)
     QChar k = foundKanji.at(index.row());
     if (!QKanjiModel::isRegularKanji(k)) return;
     ui->infoKanji->clear();
-    if (!dict.kanjiInfo.contains(k)) {
+    QKanjiInfo ki = dict.getKanjiInfo(k);
+    if (ki.isEmpty()) {
         ui->infoKanji->setText(tr("Kanji %1 not found in dictionary.").arg(k));
         return;
     }
     QString msg;
-    QKanjiInfo ki = dict.kanjiInfo[k];
+    int strokes = dict.kanjiStrokes[k];
+    int grade = dict.kanjiGrade[k];
     msg = tr("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">");
     msg += tr("<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">");
     msg += tr("p, li { white-space: pre-wrap; }");
@@ -286,9 +296,9 @@ void MainWindow::kanjiClicked(const QModelIndex &index)
             arg(QApplication::font("QTextBrowser").pointSize());
     msg += tr("<p style=\" margin-top:0px; margin-bottom:10px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'%1'; font-size:36pt;\">%2</span></p>").arg(fontResults.family()).arg(ki.kanji);
 
-    msg += tr("<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">Strokes:</span> %1</p>").arg(ki.strokes);
+    msg += tr("<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">Strokes:</span> %1</p>").arg(strokes);
     msg += tr("<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">Parts:</span> %1</p>").arg(ki.parts.join(tr(" ")));
-    msg += tr("<p style=\" margin-top:0px; margin-bottom:10px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">Grade:</span> %1</p>").arg(ki.grade);
+    msg += tr("<p style=\" margin-top:0px; margin-bottom:10px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">Grade:</span> %1</p>").arg(grade);
 
     msg += tr("<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">On:</span> %1</p>").arg(ki.onReading.join(tr(", ")));
     msg += tr("<p style=\" margin-top:0px; margin-bottom:10px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">Kun:</span> %1</p>").arg(ki.kunReading.join(tr(", ")));

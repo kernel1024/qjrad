@@ -4,7 +4,6 @@ QKDictionary::QKDictionary(QObject *parent) :
     QObject(parent)
 {
     radicalsLookup.clear();
-    kanjiInfo.clear();
     kanjiParts.clear();
     errorString.clear();
 }
@@ -12,6 +11,8 @@ QKDictionary::QKDictionary(QObject *parent) :
 bool QKDictionary::loadDictionaries()
 {
     radicalsLookup.clear();
+    kanjiStrokes.clear();
+    kanjiGrade.clear();
     errorString.clear();
 
     // Load radicals dictionary
@@ -58,109 +59,7 @@ bool QKDictionary::loadDictionaries()
     }
     fp.close();
 
-    QDomDocument kanjiDict;
-    QFile fk(":/data/kanjidic2.xml");
-    if (!fk.open(QIODevice::ReadOnly)) {
-        errorString = tr("cannot read kanjidict");
-        return false;
-    }
-    if (!kanjiDict.setContent(&fk)) {
-        fk.close();
-        errorString = tr("cannot parse kanjidict xml");
-        return false;
-    }
-
-    QDomElement root = kanjiDict.documentElement();
-
-    for (QDomNode i = root.firstChild();!i.isNull();i=i.nextSibling()) {
-        if (i.nodeName().toLower()!="character") continue;
-        if (i.firstChildElement("literal").isNull() ||
-                !i.firstChildElement("literal").hasChildNodes() ||
-                !i.firstChildElement("literal").firstChild().isText() ||
-                i.firstChildElement("literal").firstChild().toText().data().isEmpty()) {
-            errorString = tr("Invalid character entry - no *literal* tag");
-            return false;
-        }
-        QStringList on, kun, mean;
-        on.clear();
-        kun.clear();
-        mean.clear();
-
-        // literal - kanji character itself
-        QChar li = i.firstChildElement("literal").firstChild().toText().data().at(0);
-
-        // stroke count
-        if (i.firstChildElement("misc").isNull() ||
-                !i.firstChildElement("misc").hasChildNodes() ||
-                i.firstChildElement("misc").firstChildElement("stroke_count").isNull() ||
-                !i.firstChildElement("misc").firstChildElement("stroke_count").hasChildNodes() ||
-                !i.firstChildElement("misc").firstChildElement("stroke_count").firstChild().isText() ||
-                i.firstChildElement("misc").firstChildElement("stroke_count").firstChild().toText().data().isEmpty()) {
-            errorString = tr("Invalid character entry - no *stroke_count* tag, for kanji %1.").arg(li);
-            return false;
-        }
-        bool okconv;
-        // stroke count
-        int lc = i.firstChildElement("misc").firstChildElement("stroke_count").firstChild().toText().data().toInt(&okconv);
-        if (!okconv) {
-            errorString = tr("Invalid character entry - invalid *stroke_count* tag, for kanji %1.").arg(li);
-            return false;
-        }
-
-        // grade: 1..6 - Kyouiku Kanji, 7..8 - remaining Jouyou Kanji, 9..10 - Jinmeiyou Kanji, 11 - remaining unclassified Kanji
-        int lg=11;
-        if (!i.firstChildElement("misc").isNull() &&
-                i.firstChildElement("misc").hasChildNodes() &&
-                !i.firstChildElement("misc").firstChildElement("grade").isNull() &&
-                i.firstChildElement("misc").firstChildElement("grade").hasChildNodes() &&
-                i.firstChildElement("misc").firstChildElement("grade").firstChild().isText() &&
-                !i.firstChildElement("misc").firstChildElement("grade").firstChild().toText().data().isEmpty()) {
-            lg = i.firstChildElement("misc").firstChildElement("grade").firstChild().toText().data().toInt(&okconv);
-            if (!okconv) lg=11;
-        }
-
-        // reading and meaning
-        if (!i.firstChildElement("reading_meaning").isNull() &&
-                i.firstChildElement("reading_meaning").hasChildNodes() &&
-                !i.firstChildElement("reading_meaning").firstChildElement("rmgroup").isNull() &&
-                i.firstChildElement("reading_meaning").firstChildElement("rmgroup").hasChildNodes()) {
-            for (QDomNode j = i.firstChildElement("reading_meaning").firstChildElement("rmgroup").firstChild();!j.isNull();j=j.nextSibling()) {
-                if (j.nodeName().toLower()=="reading" &&
-                        !j.attributes().namedItem("r_type").isNull() &&
-                        j.attributes().namedItem("r_type").nodeValue().toLower()=="ja_on" &&
-                        !j.firstChild().isNull() &&
-                        j.firstChild().isText() &&
-                        !j.firstChild().toText().data().isEmpty()) {
-                    on << j.firstChild().toText().data();
-                }
-                if (j.nodeName().toLower()=="reading" &&
-                        !j.attributes().namedItem("r_type").isNull() &&
-                        j.attributes().namedItem("r_type").nodeValue().toLower()=="ja_kun" &&
-                        !j.firstChild().isNull() &&
-                        j.firstChild().isText() &&
-                        !j.firstChild().toText().data().isEmpty()) {
-                    kun << j.firstChild().toText().data();
-                }
-                if (j.nodeName().toLower()=="meaning" &&
-                        j.attributes().isEmpty() &&
-                        j.firstChild().isText() &&
-                        !j.firstChild().toText().data().isEmpty()) {
-                    mean << j.firstChild().toText().data();
-                }
-            }
-        }
-
-        QStringList parts;
-        parts.clear();
-        if (kanjiParts.contains(li))
-            parts = kanjiParts[li];
-
-        kanjiInfo[li] = QKanjiInfo(li,lc,parts,on,kun,mean,lg);
-    }
-
-    kanjiDict.clear();
-
-    return true;
+    return loadKanjiDict();
 }
 
 QKDictionary *kdict = NULL;
@@ -170,20 +69,20 @@ QMutex kdictmutex;
 bool kanjiLessThan(const QChar &c1, const QChar &c2)
 {
     if (kdict==NULL) return (c1<c2); // in case if kdict is not present - simply compare unicode characters
-    if (!kdict->kanjiInfo.contains(c1) || !kdict->kanjiInfo.contains(c2)) return (c1<c2); // also here
+    if (!kdict->kanjiStrokes.contains(c1) || !kdict->kanjiStrokes.contains(c2)) return (c1<c2); // also here
     // in-depth compare with kdict info
-    if (kdict->kanjiInfo[c1].strokes!=kdict->kanjiInfo[c2].strokes) // if strokes count differs...
-        return (kdict->kanjiInfo[c1].strokes<kdict->kanjiInfo[c2].strokes); // compare by strokes count
+    if (kdict->kanjiStrokes[c1]!=kdict->kanjiStrokes[c2]) // if strokes count differs...
+        return (kdict->kanjiStrokes[c1]<kdict->kanjiStrokes[c2]); // compare by strokes count
     else {
-        if (kdict->kanjiInfo[c1].grade!=kdict->kanjiInfo[c2].grade) // if grade level differs...
-            return (kdict->kanjiInfo[c1].grade!=kdict->kanjiInfo[c2].grade); // compare by grade
+        if (kdict->kanjiGrade[c1]!=kdict->kanjiGrade[c2]) // if grade level differs...
+            return (kdict->kanjiGrade[c1]!=kdict->kanjiGrade[c2]); // compare by grade
         else
             return (c1<c2); // compare by unicode code inside same-grade/same-strokes groups
     }
 
 }
 
-QString QKDictionary::sortKanji(const QString src)
+QString QKDictionary::sortKanji(const QString &src)
 {
     kdictmutex.lock();
     kdict = this;
@@ -193,10 +92,52 @@ QString QKDictionary::sortKanji(const QString src)
     return s;
 }
 
+QKanjiInfo QKDictionary::getKanjiInfo(const QChar &kanji)
+{
+    QKanjiInfo ki = QKanjiInfo();
+    QFile f(QString(":/kanjidic/kanji-%1").arg(kanji.unicode()));
+    if (!f.open(QIODevice::ReadOnly)) return ki;
+    QDataStream fb(&f);
+    fb >> ki;
+    f.close();
+    return ki;
+}
+
+bool QKDictionary::loadKanjiDict()
+{
+    QDir::setSearchPaths("kanjidict",QProcessEnvironment::systemEnvironment().value("PATH").split(':'));
+    QDir::addSearchPath("kanjidict",QDir::currentPath());
+    QDir::addSearchPath("kanjidict","/usr/share/qjrad");
+    QDir::addSearchPath("kanjidict","/usr/local/share/qjrad");
+    QFileInfo fi("kanjidict:kanjidic.rcc");
+    if (!fi.exists()) {
+        errorString = tr("Unable to locate main kanjidic.rcc file");
+        return false;
+    }
+    QResource::registerResource("kanjidict:kanjidic.rcc");
+
+    QFile f(":/kanjidic/summary");
+    if (!f.open(QIODevice::ReadOnly)) {
+        errorString = tr("Unable to load strokes info from dictionary");
+        return false;
+    }
+    QDataStream fb(&f);
+    fb >> kanjiStrokes >> kanjiGrade;
+    f.close();
+
+    return true;
+}
+
 QKRadItem::QKRadItem()
 {
     radical = QChar();
     strokes = 0;
+    jisCode.clear();
+    kanji.clear();
+}
+
+QKRadItem::~QKRadItem()
+{
     jisCode.clear();
     kanji.clear();
 }
@@ -263,33 +204,36 @@ QKRadItem & QKRadItem::operator =(const QKRadItem &other)
 QKanjiInfo::QKanjiInfo()
 {
     kanji = QChar();
-    strokes = 0;
     parts.clear();
     onReading.clear();
     kunReading.clear();
     meaning.clear();
 }
 
-QKanjiInfo::QKanjiInfo(const QChar &aKanji, int aStrokes, const QStringList &aParts, const QStringList &aOnReading, const QStringList &aKunReading, const QStringList &aMeaning, int aGrade)
+QKanjiInfo::~QKanjiInfo()
+{
+    parts.clear();
+    onReading.clear();
+    kunReading.clear();
+    meaning.clear();
+}
+
+QKanjiInfo::QKanjiInfo(const QChar &aKanji, const QStringList &aParts, const QStringList &aOnReading, const QStringList &aKunReading, const QStringList &aMeaning)
 {
     kanji = aKanji;
-    strokes = aStrokes;
     parts = aParts;
     onReading = aOnReading;
     kunReading = aKunReading;
     meaning = aMeaning;
-    grade = aGrade;
 }
 
 QKanjiInfo &QKanjiInfo::operator =(const QKanjiInfo &other)
 {
     kanji = other.kanji;
-    strokes = other.strokes;
     parts = other.parts;
     onReading = other.onReading;
     kunReading = other.kunReading;
     meaning = other.meaning;
-    grade = other.grade;
     return *this;
 }
 
@@ -309,3 +253,16 @@ bool QKanjiInfo::isEmpty()
 }
 
 
+
+QDataStream &operator <<(QDataStream &out, const QKanjiInfo &obj)
+{
+    out << obj.kanji << obj.parts << obj.onReading << obj.kunReading << obj.meaning;
+    return out;
+}
+
+
+QDataStream &operator >>(QDataStream &in, QKanjiInfo &obj)
+{
+    in >> obj.kanji >> obj.parts >> obj.onReading >> obj.kunReading >> obj.meaning;
+    return in;
+}

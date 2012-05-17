@@ -12,6 +12,7 @@ public:
     QString jisCode;
     QString kanji;
     QKRadItem();
+    ~QKRadItem();
     QKRadItem(const QChar &aRadical);
     QKRadItem(const QChar &aRadical, int aStrokes);
     QKRadItem(const QChar &aRadical, int aStrokes, const QString &aJisCode, const QString &aKanji);
@@ -24,18 +25,18 @@ public:
 
 class QKanjiInfo
 {
+    friend QDataStream &operator<<(QDataStream &out, const QKanjiInfo &obj);
+    friend QDataStream &operator>>(QDataStream &in, QKanjiInfo &obj);
 public:
     QChar kanji;
-    int strokes;
     QStringList parts;
     QStringList onReading;
     QStringList kunReading;
     QStringList meaning;
-    int grade;
     QKanjiInfo();
-    QKanjiInfo(const QChar &aKanji, int aStrokes, const QStringList &aParts,
-               const QStringList &aOnReading, const QStringList &aKunReading, const QStringList &aMeaning,
-               int aGrade);
+    ~QKanjiInfo();
+    QKanjiInfo(const QChar &aKanji, const QStringList &aParts,
+               const QStringList &aOnReading, const QStringList &aKunReading, const QStringList &aMeaning);
     QKanjiInfo &operator=(const QKanjiInfo &other);
     bool operator==(const QKanjiInfo &s) const;
     bool operator!=(const QKanjiInfo &s) const;
@@ -47,16 +48,19 @@ class QKDictionary : public QObject
     Q_OBJECT
 public:
     QList<QKRadItem> radicalsLookup;
-    QHash<QChar,QKanjiInfo> kanjiInfo;
     QHash<QChar,QStringList> kanjiParts;
+    QHash<QChar,int> kanjiStrokes;
+    QHash<QChar,int> kanjiGrade;
 
     QString errorString;
 
     explicit QKDictionary(QObject *parent = 0);
 
     bool loadDictionaries();
-    QString sortKanji(const QString src);
-
+    QString sortKanji(const QString &src);
+    QKanjiInfo getKanjiInfo(const QChar &kanji);
+private:
+    bool loadKanjiDict();
 signals:
 
 public slots:

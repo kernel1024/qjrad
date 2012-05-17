@@ -1,0 +1,10 @@
+#!/bin/sh
+make clean
+qmake
+make
+rm -rf ./out
+mkdir out
+cd out
+../kanjicnv ../../data/kradfilex ../../data/kanjidic2.xml > cnv-out 2>&1
+rcc kanjidic.qrc -binary -o ../../kanjidic.rcc
+rm *.bin
