@@ -11,7 +11,6 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
     if (!dict.loadDictionaries()) {
         QMessageBox::critical(this,tr("QJRad - error"),tr("Cannot load main dictionaries\nError: %1").arg(dict.errorString));
-        return;
     }
 
     QIcon appicon;
