@@ -1,4 +1,5 @@
 #include <QtCore>
+#include <QtXml>
 #include "../kdictionary.h"
 
 QHash<QChar,QKanjiInfo> kanjiInfo;
