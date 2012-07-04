@@ -3,12 +3,22 @@
 #include "kanjimodel.h"
 #include "settingsdlg.h"
 #include "miscutils.h"
+#include "global.h"
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+
+    wordFinder = new WordFinder(this);
+    dictManager = new CGoldenDictMgr(this);
+    netMan = new ArticleNetworkAccessManager(this,dictManager);
+    ui->dictViewer->page()->setNetworkAccessManager(netMan);
+
+    infoKanjiTemplate = ui->infoKanji->toHtml();
+    ui->infoKanji->clear();
+
     if (!dict.loadDictionaries()) {
         QMessageBox::critical(this,tr("QJRad - error"),tr("Cannot load main dictionaries\nError: %1").arg(dict.errorString));
     }
@@ -22,8 +32,6 @@ MainWindow::MainWindow(QWidget *parent) :
     setWindowIcon(appicon);
 
     foundKanji.clear();
-    geomFirstWinPos = false;
-    savedSplitterPos = 200;
 
     statusMsg = new QLabel(tr("Ready"));
     statusMsg->setMinimumWidth(150);
@@ -35,14 +43,37 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->listKanji,SIGNAL(clicked(QModelIndex)),this,SLOT(kanjiClicked(QModelIndex)));
     connect(ui->listKanji,SIGNAL(activated(QModelIndex)),this,SLOT(kanjiAdd(QModelIndex)));
 
-    readSettings();
+    connect( ui->scratchPad, SIGNAL( textChanged( QString const & ) ),
+             this, SLOT( translateInputChanged( QString const & ) ) );
+
+    connect( ui->scratchPad, SIGNAL( returnPressed() ),
+             this, SLOT( translateInputFinished() ) );
+
+    connect( ui->dictWords, SIGNAL( itemSelectionChanged() ),
+             this, SLOT( wordListSelectionChanged() ) );
+
+    connect( wordFinder, SIGNAL( updated() ),
+             this, SLOT( prefixMatchUpdated() ) );
+    connect( wordFinder, SIGNAL( finished() ),
+             this, SLOT( prefixMatchFinished() ) );
+
+    connect( ui->dictViewer,SIGNAL(loadFinished(bool)),this,SLOT(dictLoadFinished(bool)));
+
+    cgl->readSettings();
+    ui->scratchPad->setFont(cgl->fontResults);
 
     allowLookup = false;
     renderButtons();
     allowLookup = true;
 
     centerWindow();
-    updateSplitters();
+
+    wordFinder->clear();
+    dictManager->loadDictionaries();
+
+    showEmptyTranslationPage();
+
+    QTimer::singleShot(1000,this,SLOT(updateSplitters()));
 }
 
 MainWindow::~MainWindow()
@@ -52,10 +83,10 @@ MainWindow::~MainWindow()
 
 void MainWindow::centerWindow()
 {
-    if (geomFirstWinPos) {
-        move(savedWinPos);
-        resize(savedWinSize);
-        geomFirstWinPos = false;
+    if (cgl->geomFirstWinPos) {
+        move(cgl->savedWinPos);
+        resize(cgl->savedWinSize);
+        cgl->geomFirstWinPos = false;
         return;
     }
     int screen = 0;
@@ -83,15 +114,31 @@ void MainWindow::updateSplitters()
 
     QList<int> widths;
     widths.clear();
-    widths << width()-savedSplitterPos;
-    widths << savedSplitterPos;
+    widths << ui->frameRad->width() - cgl->savedSplitterPos;
+    widths << cgl->savedSplitterPos;
     ui->splitter->setSizes(widths);
+
+    ui->splitterMain->setCollapsible(1,true);
+    widths.clear();
+    widths << width() - cgl->savedDictSplitterPos;
+    widths << cgl->savedDictSplitterPos;
+    ui->splitterMain->setSizes(widths);
 }
 
 void MainWindow::clearRadButtons()
 {
     while (!buttons.isEmpty())
         buttons.takeFirst()->deleteLater();
+}
+
+QList<int> MainWindow::getSplittersSize()
+{
+    return ui->splitter->sizes();
+}
+
+QList<int> MainWindow::getDictSplittersSize()
+{
+    return ui->splitterMain->sizes();
 }
 
 int MainWindow::getKanjiGrade(const QChar &kanji)
@@ -120,7 +167,7 @@ void MainWindow::renderButtons()
             // insert label
             QLabel *rl = new QLabel(tr("%1").arg(ri.strokes),ui->frameRad);
             rl->setAlignment(Qt::AlignCenter);
-            rl->setFont(fontLabels);
+            rl->setFont(cgl->fontLabels);
             rl->setFrameShape(QFrame::Box);
             w = rl;
             rmark=ri.strokes;
@@ -129,7 +176,7 @@ void MainWindow::renderButtons()
         // insert button
         QPushButton *pb = new QPushButton(ri.radical,ui->frameRad);
         pb->setFlat(true);
-        pb->setFont(fontBtn);
+        pb->setFont(cgl->fontBtn);
         pb->setCheckable(true);
         // qt 4.8 bug with kde color configuration tool. disabled color is still incorrect, use our specific color
         QPalette p = pb->palette();
@@ -158,7 +205,7 @@ void MainWindow::insertOneWidget(QWidget *w, int &row, int &clmn)
         ui->gridRad->addWidget(w,row,clmn);
         buttons << w;
         clmn++;
-        if (clmn>=maxHButtons) {
+        if (clmn>=cgl->maxHButtons) {
             clmn=0;
             row++;
         }
@@ -261,7 +308,7 @@ void MainWindow::radicalPressed(const bool)
 
     QItemSelectionModel *m = ui->listKanji->selectionModel();
     QAbstractItemModel *n = ui->listKanji->model();
-    ui->listKanji->setModel(new QKanjiModel(this,foundKanji,fontResults,fontLabels));
+    ui->listKanji->setModel(new QKanjiModel(this,foundKanji,cgl->fontResults,cgl->fontLabels));
     m->deleteLater();
     n->deleteLater();
     ui->infoKanji->clear();
@@ -287,23 +334,16 @@ void MainWindow::kanjiClicked(const QModelIndex &index)
     QString msg;
     int strokes = dict.kanjiStrokes[k];
     int grade = dict.kanjiGrade[k];
-    msg = tr("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">");
-    msg += tr("<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">");
-    msg += tr("p, li { white-space: pre-wrap; }");
-    msg += tr("</style></head><body style=\" font-family:'%1'; font-size:%2pt; font-weight:400; font-style:normal;\">").
-            arg(QApplication::font("QTextBrowser").family()).
-            arg(QApplication::font("QTextBrowser").pointSize());
-    msg += tr("<p style=\" margin-top:0px; margin-bottom:10px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'%1'; font-size:36pt;\">%2</span></p>").arg(fontResults.family()).arg(ki.kanji);
 
-    msg += tr("<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">Strokes:</span> %1</p>").arg(strokes);
-    msg += tr("<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">Parts:</span> %1</p>").arg(ki.parts.join(tr(" ")));
-    msg += tr("<p style=\" margin-top:0px; margin-bottom:10px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">Grade:</span> %1</p>").arg(grade);
-
-    msg += tr("<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">On:</span> %1</p>").arg(ki.onReading.join(tr(", ")));
-    msg += tr("<p style=\" margin-top:0px; margin-bottom:10px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">Kun:</span> %1</p>").arg(ki.kunReading.join(tr(", ")));
-
-    msg += tr("<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">Meaning:</span> %1</p>").arg(ki.meaning.join(tr(", ")));
-    msg += tr("</body></html>");
+    msg = QString(infoKanjiTemplate)
+          .arg(cgl->fontResults.family())
+          .arg(ki.kanji)
+          .arg(strokes)
+          .arg(ki.parts.join(tr(" ")))
+          .arg(grade)
+          .arg(ki.onReading.join(tr(", ")))
+          .arg(ki.kunReading.join(tr(", ")))
+          .arg(ki.meaning.join(tr(", ")));
 
     ui->infoKanji->setHtml(msg);
 }
@@ -319,72 +359,192 @@ void MainWindow::kanjiAdd(const QModelIndex &index)
 
 void MainWindow::closeEvent(QCloseEvent * event)
 {
-    writeSettings();
+    cgl->writeSettings(this);
     event->accept();
 }
 
 void MainWindow::settingsDlg()
 {
-    QSettingsDlg *dlg = new QSettingsDlg(this,fontBtn,fontLabels,fontResults,maxHButtons);
+    QSettingsDlg *dlg = new QSettingsDlg(this,cgl->fontBtn,cgl->fontLabels,cgl->fontResults,cgl->maxHButtons,
+                                         cgl->getDictPaths());
     if (dlg->exec()) {
-        fontBtn = dlg->fontBtn;
-        fontLabels = dlg->fontLabels;
-        fontResults = dlg->fontResults;
-        maxHButtons = dlg->maxHButtons;
+        cgl->fontBtn = dlg->fontBtn;
+        cgl->fontLabels = dlg->fontLabels;
+        cgl->fontResults = dlg->fontResults;
+        cgl->maxHButtons = dlg->maxHButtons;
         allowLookup = false;
         renderButtons();
         allowLookup = true;
         resetRadicals();
-        ui->scratchPad->setFont(fontResults);
+        ui->scratchPad->setFont(cgl->fontResults);
+        cgl->setDictPaths(dlg->getDictPaths());
+        wordFinder->clear();
+        dictManager->loadDictionaries();
     }
     dlg->setParent(NULL);
     delete dlg;
 }
 
-void MainWindow::readSettings()
+void MainWindow::wordListItemActivated( QListWidgetItem * item )
 {
-    QFont fontResL = QApplication::font("QListView");
-    fontResL.setPointSize(14);
-    QFont fontBtnL = QApplication::font("QPushButton");
-    fontBtnL.setPointSize(14);
-    QFont fontBtnLabelL = QApplication::font("QLabel");
-    fontBtnLabelL.setPointSize(12);
-    fontBtnLabelL.setWeight(QFont::Bold);
-
-    QSettings se("kernel1024","qjrad");
-    se.beginGroup("Main");
-    fontResults = qvariant_cast<QFont>(se.value("fontResult",fontResL));
-    fontBtn = qvariant_cast<QFont>(se.value("fontButton",fontBtnL));
-    fontLabels = qvariant_cast<QFont>(se.value("fontLabel",fontBtnLabelL));
-    maxHButtons = se.value("maxHButtons",30).toInt();
-    se.endGroup();
-    se.beginGroup("Geometry");
-    savedWinPos = se.value("winPos",QPoint(20,20)).toPoint();
-    savedWinSize = se.value("winSize",QSize(200,200)).toSize();
-    geomFirstWinPos = true;
-    bool okconv;
-    savedSplitterPos = se.value("splitterPos",200).toInt(&okconv);
-    if (!okconv) savedSplitterPos = 200;
-    se.endGroup();
-
-    ui->scratchPad->setFont(fontResults);
+    showTranslationFor( item->text() );
 }
 
-void MainWindow::writeSettings()
+void MainWindow::wordListSelectionChanged()
 {
-    QSettings se("kernel1024","qjrad");
-    se.beginGroup("Main");
-    se.setValue("fontResult",fontResults);
-    se.setValue("fontButton",fontBtn);
-    se.setValue("fontLabel",fontLabels);
-    se.setValue("maxHButtons",maxHButtons);
-    se.endGroup();
-    se.beginGroup("Geometry");
-    se.setValue("winPos",pos());
-    se.setValue("winSize",size());
-    QList<int> szs = ui->splitter->sizes();
-    int ssz = 200;
-    if (szs.count()>=2) ssz = szs[1];
-    se.setValue("splitterPos",ssz);
-    se.endGroup();
+    QList< QListWidgetItem * > selected = ui->dictWords->selectedItems();
+
+    if ( selected.size() )
+        wordListItemActivated( selected.front() );
+}
+
+void MainWindow::dictLoadFinished(bool)
+{
+    ui->dictViewer->unsetCursor();
+}
+
+void MainWindow::prefixMatchUpdated()
+{
+    updateMatchResults( false );
+}
+
+void MainWindow::prefixMatchFinished()
+{
+    updateMatchResults( true );
+}
+
+void MainWindow::updateMatchResults(bool finished)
+{
+    WordFinder::SearchResults const & results = wordFinder->getResults();
+
+    ui->dictWords->setUpdatesEnabled( false );
+
+    for( unsigned x = 0; x < results.size(); ++x )
+    {
+        QListWidgetItem * i = ui->dictWords->item( x );
+
+        if ( !i )
+        {
+            i = new QListWidgetItem( results[ x ].first, ui->dictWords );
+
+            if ( results[ x ].second )
+            {
+                QFont f = i->font();
+                f.setItalic( true );
+                i->setFont( f );
+            }
+            ui->dictWords->addItem( i );
+        }
+        else
+        {
+            if ( i->text() != results[ x ].first )
+                i->setText( results[ x ].first );
+
+            QFont f = i->font();
+            if ( f.italic() != results[ x ].second )
+            {
+                f.setItalic( results[ x ].second );
+                i->setFont( f );
+            }
+        }
+        if (i->text().at(0).direction() == QChar::DirR)
+            i->setTextAlignment(Qt::AlignRight);
+        if (i->text().at(0).direction() == QChar::DirL)
+            i->setTextAlignment(Qt::AlignLeft);
+    }
+
+    while ( ui->dictWords->count() > (int) results.size() )
+    {
+        // Chop off any extra items that were there
+        QListWidgetItem * i = ui->dictWords->takeItem( ui->dictWords->count() - 1 );
+
+        if ( i )
+            delete i;
+        else
+            break;
+    }
+
+    if ( ui->dictWords->count() )
+    {
+        ui->dictWords->scrollToItem( ui->dictWords->item( 0 ), QAbstractItemView::PositionAtTop );
+        ui->dictWords->setCurrentItem( 0, QItemSelectionModel::Clear );
+    }
+
+    ui->dictWords->setUpdatesEnabled( true );
+
+    if ( finished )
+    {
+        ui->dictWords->unsetCursor();
+
+        if ( !wordFinder->getErrorString().isEmpty() )
+            statusBar()->showMessage( tr( "WARNING: %1" ).arg( wordFinder->getErrorString() ) );
+    }
+}
+
+void MainWindow::translateInputChanged( QString const & newValue )
+{
+    showEmptyTranslationPage();
+
+    // If there's some status bar message present, clear it since it may be
+    // about the previous search that has failed.
+    if ( !statusBar()->currentMessage().isEmpty() )
+        statusBar()->clearMessage();
+
+    // If some word is selected in the word list, unselect it. This prevents
+    // triggering a set of spurious activation signals when the list changes.
+
+    if ( ui->dictWords->selectionModel()->hasSelection() )
+        ui->dictWords->setCurrentItem( 0, QItemSelectionModel::Clear );
+
+    QString req = newValue.trimmed();
+
+    if ( !req.size() )
+    {
+        // An empty request always results in an empty result
+        wordFinder->cancel();
+        ui->dictWords->clear();
+        ui->dictWords->unsetCursor();
+
+        return;
+    }
+
+    ui->dictWords->setCursor( Qt::WaitCursor );
+
+    wordFinder->prefixMatch( req, dictManager->dictionaries );
+}
+
+void MainWindow::translateInputFinished()
+{
+    QString word = ui->scratchPad->text();
+
+    if ( word.size() )
+        showTranslationFor( word );
+}
+
+void MainWindow::showTranslationFor( QString const & inWord )
+{
+    QUrl req;
+
+    req.setScheme( "gdlookup" );
+    req.setHost( "localhost" );
+    req.addQueryItem( "word", inWord );
+
+    ui->dictViewer->load( req );
+
+    //QApplication::setOverrideCursor( Qt::WaitCursor );
+    ui->dictViewer->setCursor( Qt::WaitCursor );
+}
+
+void MainWindow::showEmptyTranslationPage()
+{
+    QUrl req;
+
+    req.setScheme( "gdlookup" );
+    req.setHost( "localhost" );
+    req.addQueryItem( "blank", "1" );
+
+    ui->dictViewer->load( req );
+
+    //QApplication::setOverrideCursor( Qt::WaitCursor );
+    ui->dictViewer->setCursor( Qt::WaitCursor );
 }

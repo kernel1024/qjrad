@@ -4,7 +4,7 @@
 
 
 QSettingsDlg::QSettingsDlg(QWidget *parent, const QFont &fBtn, const QFont &fLabels, const QFont &fResults,
-                           int aMaxHButtons) :
+                           int aMaxHButtons, const QStringList &dictPaths) :
     QDialog(parent),
     ui(new Ui::QSettingsDlg)
 {
@@ -18,12 +18,24 @@ QSettingsDlg::QSettingsDlg(QWidget *parent, const QFont &fBtn, const QFont &fLab
     connect(ui->btnFontLabels,SIGNAL(clicked()),this,SLOT(changeFont()));
     connect(ui->btnFontResults,SIGNAL(clicked()),this,SLOT(changeFont()));
     connect(ui->buttonsCnt,SIGNAL(valueChanged(int)),this,SLOT(cntChanged(int)));
+    connect(ui->btnAddPath,SIGNAL(clicked()),this,SLOT(addDir()));
+    connect(ui->btnDelPath,SIGNAL(clicked()),this,SLOT(delDir()));
+
+    ui->dictPaths->addItems(dictPaths);
     updateFonts();
 }
 
 QSettingsDlg::~QSettingsDlg()
 {
     delete ui;
+}
+
+QStringList QSettingsDlg::getDictPaths()
+{
+    QStringList sl;
+    for (int i=0;i<ui->dictPaths->count();i++)
+        sl << ui->dictPaths->item(i)->text();
+    return sl;
 }
 
 void QSettingsDlg::updateFonts()
@@ -62,4 +74,18 @@ void QSettingsDlg::changeFont()
 void QSettingsDlg::cntChanged(int i)
 {
     maxHButtons = i;
+}
+
+void QSettingsDlg::addDir()
+{
+    QString s = QFileDialog::getExistingDirectory(this,tr("Select directory"));
+    if (!s.isEmpty())
+        ui->dictPaths->addItem(s);
+}
+
+void QSettingsDlg::delDir()
+{
+    int idx = ui->dictPaths->currentRow();
+    if (idx<0 || idx>=ui->dictPaths->count()) return;
+    ui->dictPaths->removeItemWidget(ui->dictPaths->item(idx));
 }

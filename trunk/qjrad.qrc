@@ -7,5 +7,6 @@
         <file>data/appicon48.png</file>
         <file>data/appicon64.png</file>
         <file>data/appicon128.png</file>
+        <file>data/article-style.css</file>
     </qresource>
 </RCC>
