@@ -15,8 +15,9 @@ public:
     QFont fontBtn, fontLabels, fontResults;
     int maxHButtons;
     explicit QSettingsDlg(QWidget *parent, const QFont &fBtn, const QFont &fLabels, const QFont &fResults,
-                          int aMaxHButtons);
+                          int aMaxHButtons, const QStringList& dictPaths);
     ~QSettingsDlg();
+    QStringList getDictPaths();
     
 private:
     Ui::QSettingsDlg *ui;
@@ -25,6 +26,8 @@ private:
 public slots:
     void changeFont();
     void cntChanged(int i);
+    void addDir();
+    void delDir();
 };
 
 #endif // SETTINGSDLG_H
