@@ -379,6 +379,7 @@ void MainWindow::settingsDlg()
         allowLookup = true;
         resetRadicals();
         ui->scratchPad->setFont(cgl->fontResults);
+        ui->dictWords->setFont(cgl->fontBtn);
         cgl->setDictPaths(dlg->getDictPaths());
         wordFinder->clear();
         dictManager->loadDictionaries();
