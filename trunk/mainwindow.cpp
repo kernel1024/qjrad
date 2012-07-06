@@ -20,7 +20,8 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->infoKanji->clear();
 
     if (!dict.loadDictionaries()) {
-        QMessageBox::critical(this,tr("QJRad - error"),tr("Cannot load main dictionaries\nError: %1").arg(dict.errorString));
+        QMessageBox::critical(this,tr("QJRad - error"),
+                              tr("Cannot load main dictionaries\nError: %1").arg(dict.errorString));
     }
 
     QIcon appicon;
@@ -61,6 +62,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     cgl->readSettings();
     ui->scratchPad->setFont(cgl->fontResults);
+    ui->dictWords->setFont(cgl->fontBtn);
 
     allowLookup = false;
     renderButtons();
