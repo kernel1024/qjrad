@@ -43,11 +43,12 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->btnSettings,SIGNAL(clicked()),this,SLOT(settingsDlg()));
     connect(ui->listKanji,SIGNAL(clicked(QModelIndex)),this,SLOT(kanjiClicked(QModelIndex)));
     connect(ui->listKanji,SIGNAL(activated(QModelIndex)),this,SLOT(kanjiAdd(QModelIndex)));
+    connect(ui->clearScratch,SIGNAL(clicked()),ui->scratchPad,SLOT(clearEditText()));
 
-    connect( ui->scratchPad, SIGNAL( textChanged( QString const & ) ),
+    connect( ui->scratchPad, SIGNAL(editTextChanged(QString const &)),
              this, SLOT( translateInputChanged( QString const & ) ) );
 
-    connect( ui->scratchPad, SIGNAL( returnPressed() ),
+    connect( ui->scratchPad->lineEdit(), SIGNAL( returnPressed() ),
              this, SLOT( translateInputFinished() ) );
 
     connect( ui->dictWords, SIGNAL( itemSelectionChanged() ),
@@ -125,6 +126,11 @@ void MainWindow::updateSplitters()
     widths << width() - cgl->savedDictSplitterPos;
     widths << cgl->savedDictSplitterPos;
     ui->splitterMain->setSizes(widths);
+
+    widths.clear();
+    widths << 2*height()/5;
+    widths << 3*height()/5;
+    ui->splitterDict->setSizes(widths);
 }
 
 void MainWindow::clearRadButtons()
@@ -356,7 +362,7 @@ void MainWindow::kanjiAdd(const QModelIndex &index)
     if (index.row()>=foundKanji.length()) return;
     QChar k = foundKanji.at(index.row());
     if (!QKanjiModel::isRegularKanji(k)) return;
-    ui->scratchPad->setText(ui->scratchPad->text()+k);
+    ui->scratchPad->setEditText(ui->scratchPad->currentText()+k);
 }
 
 void MainWindow::closeEvent(QCloseEvent * event)
@@ -486,6 +492,9 @@ void MainWindow::updateMatchResults(bool finished)
 
 void MainWindow::translateInputChanged( QString const & newValue )
 {
+    if ((ui->scratchPad->findText(newValue)<0) && !newValue.isEmpty())
+        ui->scratchPad->addItem(ui->scratchPad->currentText());
+
     showEmptyTranslationPage();
 
     // If there's some status bar message present, clear it since it may be
@@ -518,7 +527,7 @@ void MainWindow::translateInputChanged( QString const & newValue )
 
 void MainWindow::translateInputFinished()
 {
-    QString word = ui->scratchPad->text();
+    QString word = ui->scratchPad->currentText();
 
     if ( word.size() )
         showTranslationFor( word );
