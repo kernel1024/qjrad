@@ -13,6 +13,8 @@ CONFIG += exceptions \
     rtti \
     stl
 
+LIBS += -lz
+
 SOURCES += main.cpp\
         mainwindow.cpp \
     kdictionary.cpp \
