@@ -396,7 +396,12 @@ void MainWindow::settingsDlg()
 
 void MainWindow::wordListItemActivated( QListWidgetItem * item )
 {
-    showTranslationFor( item->text() );
+    QString newValue = item->text();
+
+    if ((ui->scratchPad->findText(newValue)<0) && !newValue.isEmpty())
+        ui->scratchPad->addItem(newValue);
+
+    showTranslationFor( newValue );
 }
 
 void MainWindow::wordListSelectionChanged()
