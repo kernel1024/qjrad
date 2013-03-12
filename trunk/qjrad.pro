@@ -100,7 +100,4 @@ OTHER_FILES += \
     kanjiconv/main.cpp \
     kanjiconv/convertdicts
 
-
-
-
-
+LIBS += -lz
