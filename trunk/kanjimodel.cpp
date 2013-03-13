@@ -1,5 +1,6 @@
 #include "kanjimodel.h"
 #include "miscutils.h"
+#include <QApplication>
 
 QKanjiModel::QKanjiModel(QObject *parent, const QString &KanjiList, const QFont &KanjiFont,
                          const QFont &MarkFont) :

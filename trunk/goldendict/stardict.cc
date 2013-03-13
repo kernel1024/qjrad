@@ -513,7 +513,7 @@ void StardictHeadwordsRequestRunnable::run()
 
 void StardictHeadwordsRequest::run()
 {
-  if ( isCancelled )
+  if ( isCancelled.load() != 0 )
   {
     finish();
     return;
@@ -527,7 +527,7 @@ void StardictHeadwordsRequest::run()
 
     for( unsigned x = 0; x < chain.size(); ++x )
     {
-      if ( isCancelled )
+      if ( isCancelled.load() != 0 )
       {
         finish();
         return;
@@ -633,7 +633,7 @@ void StardictArticleRequestRunnable::run()
 
 void StardictArticleRequest::run()
 {
-  if ( isCancelled )
+  if ( isCancelled.load() != 0 )
   {
     finish();
     return;
@@ -662,7 +662,7 @@ void StardictArticleRequest::run()
 
     for( unsigned x = 0; x < chain.size(); ++x )
     {
-      if ( isCancelled )
+      if ( isCancelled.load() != 0 )
       {
         finish();
         return;

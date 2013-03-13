@@ -271,11 +271,11 @@ public:
 
 void DslDictionary::deferredInit()
 {
-  if ( !deferredInitDone )
+  if ( deferredInitDone.load() == 0 )
   {
     Mutex::Lock _( deferredInitMutex );
 
-    if ( deferredInitDone )
+    if ( deferredInitDone.load() != 0 )
       return;
 
     if ( !deferredInitRunnableStarted )
@@ -299,11 +299,11 @@ string const & DslDictionary::ensureInitDone()
 
 void DslDictionary::doDeferredInit()
 {
-  if ( !deferredInitDone )
+  if ( deferredInitDone.load() == 0 )
   {
     Mutex::Lock _( deferredInitMutex );
 
-    if ( deferredInitDone )
+    if ( deferredInitDone.load() != 0 )
       return;
 
     // Do deferred init
@@ -985,7 +985,7 @@ void DslArticleRequestRunnable::run()
 
 void DslArticleRequest::run()
 {
-  if ( isCancelled )
+  if ( isCancelled.load() != 0 )
   {
     finish();
     return;
@@ -1020,7 +1020,7 @@ void DslArticleRequest::run()
   for( unsigned x = 0; x < chain.size(); ++x )
   {
     // Check if we're cancelled occasionally
-    if ( isCancelled )
+    if ( isCancelled.load() != 0 )
     {
       finish();
       return;
@@ -1158,7 +1158,7 @@ void DslResourceRequestRunnable::run()
 void DslResourceRequest::run()
 {
   // Some runnables linger enough that they are cancelled before they start
-  if ( isCancelled )
+  if ( isCancelled.load() != 0 )
   {
     finish();
     return;

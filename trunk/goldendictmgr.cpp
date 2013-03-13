@@ -22,6 +22,14 @@
 #include "goldendict/utf8.hh"
 #include "loadingdlg.h"
 
+#include <QMessageBox>
+#include <QString>
+#include <QUrl>
+
+#if QT_VERSION >= QT_VERSION_CHECK(5,0,0)
+#   include <QUrlQuery>
+#endif
+
 using std::vector;
 using std::string;
 using gd::wstring;
@@ -437,9 +445,9 @@ void ArticleRequest::bodyFinished()
            + "</div>";
 
         head += "<span class=\"gdarticlebody gdlangfrom-";
-        head += LangCoder::intToCode2( activeDict->getLangFrom() ).toAscii().data();
+        head += LangCoder::intToCode2( activeDict->getLangFrom() ).toLatin1().data();
         head += "\" lang=\"";
-        head += LangCoder::intToCode2( activeDict->getLangTo() ).toAscii().data();
+        head += LangCoder::intToCode2( activeDict->getLangTo() ).toLatin1().data();
         head += "\">";
 
         if ( errorString.size() )
@@ -896,20 +904,31 @@ sptr< Dictionary::DataRequest > ArticleNetworkAccessManager::getResource(
   {
     contentType = "text/html";
 
+    QMap< QString, QString > contexts;
+    QString word, contextsEncoded;
+
+#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
     if ( url.queryItemValue( "blank" ) == "1" )
       return dictMgr->makeEmptyPage();
 
-    QString word = url.queryItemValue( "word" );
+    word = url.queryItemValue( "word" );
 
+    contextsEncoded = url.queryItemValue( "contexts" );
+#else
+    QUrlQuery qr(url);
+    if ( qr.queryItemValue( "blank" ) == "1" )
+        return dictMgr->makeEmptyPage();
+
+    word = qr.queryItemValue( "word" );
+
+    contextsEncoded = qr.queryItemValue( "contexts" );
+
+#endif
     // Unpack contexts
-
-    QMap< QString, QString > contexts;
-
-    QString contextsEncoded = url.queryItemValue( "contexts" );
 
     if ( contextsEncoded.size() )
     {
-      QByteArray ba = QByteArray::fromBase64( contextsEncoded.toAscii() );
+      QByteArray ba = QByteArray::fromBase64( contextsEncoded.toLatin1() );
 
       QBuffer buf( & ba );
 

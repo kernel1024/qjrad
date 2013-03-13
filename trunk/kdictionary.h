@@ -1,7 +1,13 @@
 #ifndef KDICTIONARY_H
 #define KDICTIONARY_H
 
-#include <QtCore>
+#include <QObject>
+#include <QStringList>
+#include <QHash>
+#include <QList>
+#include <QDataStream>
+#include <QChar>
+#include <QString>
 
 class QKRadItem
 {

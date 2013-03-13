@@ -1,3 +1,7 @@
+#include <QMessageBox>
+#include <QLineEdit>
+#include <QDesktopWidget>
+#include <QUrl>
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "kanjimodel.h"
@@ -5,10 +9,17 @@
 #include "miscutils.h"
 #include "global.h"
 
+#if QT_VERSION >= QT_VERSION_CHECK(5,0,0)
+#include <QUrlQuery>
+#endif
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
+    if (cgl==NULL)
+        cgl = new CGlobal();
+
     ui->setupUi(this);
 
     wordFinder = new WordFinder(this);
@@ -541,14 +552,17 @@ void MainWindow::translateInputFinished()
 void MainWindow::showTranslationFor( QString const & inWord )
 {
     QUrl req;
-
     req.setScheme( "gdlookup" );
     req.setHost( "localhost" );
+#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
     req.addQueryItem( "word", inWord );
-
+#else
+    QUrlQuery requ;
+    requ.addQueryItem( "word", inWord );
+    req.setQuery(requ);
+#endif
     ui->dictViewer->load( req );
 
-    //QApplication::setOverrideCursor( Qt::WaitCursor );
     ui->dictViewer->setCursor( Qt::WaitCursor );
 }
 
@@ -558,7 +572,13 @@ void MainWindow::showEmptyTranslationPage()
 
     req.setScheme( "gdlookup" );
     req.setHost( "localhost" );
+#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
     req.addQueryItem( "blank", "1" );
+#else
+    QUrlQuery requ;
+    requ.addQueryItem( "blank", "1" );
+    req.setQuery(requ);
+#endif
 
     ui->dictViewer->load( req );
 
