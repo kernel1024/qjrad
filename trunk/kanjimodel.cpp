@@ -1,6 +1,10 @@
 #include "kanjimodel.h"
 #include "miscutils.h"
 #include <QApplication>
+#include <QPainter>
+#include <QPen>
+#include <QBrush>
+#include <QFont>
 
 QKanjiModel::QKanjiModel(QObject *parent, const QString &KanjiList, const QFont &KanjiFont,
                          const QFont &MarkFont) :

@@ -1,6 +1,7 @@
 #include "global.h"
 #include "mainwindow.h"
 #include <QApplication>
+#include <QSettings>
 
 CGlobal* cgl = NULL;
 

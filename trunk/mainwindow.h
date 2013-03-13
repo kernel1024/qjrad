@@ -8,6 +8,7 @@
 #include <QLabel>
 #include <QModelIndex>
 #include <QListWidgetItem>
+#include <QCloseEvent>
 
 #include "kdictionary.h"
 #include "goldendictmgr.h"

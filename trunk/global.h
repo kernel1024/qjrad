@@ -1,8 +1,13 @@
 #ifndef GLOBAL_H
 #define GLOBAL_H
 
-#include <QtCore>
-#include <QtGui>
+#include <QObject>
+#include <QString>
+#include <QDir>
+#include <QStringList>
+#include <QFont>
+#include <QPoint>
+#include <QSize>
 
 class MainWindow;
 
