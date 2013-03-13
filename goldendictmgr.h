@@ -1,9 +1,19 @@
 #ifndef GOLDENDICTMGR_H
 #define GOLDENDICTMGR_H
 
-#include <QtCore>
-#include <QtGui>
-#include <QtNetwork>
+#include <QObject>
+#include <QStringList>
+#include <QList>
+#include <QMap>
+#include <QPair>
+#include <QWidget>
+#include <QNetworkAccessManager>
+#include <QUrl>
+#include <QNetworkReply>
+#include <QNetworkRequest>
+#include <QIODevice>
+#include <QThread>
+
 #include <vector>
 #include <set>
 #include <string>

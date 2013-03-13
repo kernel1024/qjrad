@@ -1,5 +1,10 @@
-#include <QtCore>
-#include <QtXml>
+#include <QString>
+#include <QChar>
+#include <QFile>
+#include <QTextStream>
+#include <QHash>
+#include <QDomDocument>
+#include <QDomElement>
 #include "../kdictionary.h"
 
 QHash<QChar,QKanjiInfo> kanjiInfo;
