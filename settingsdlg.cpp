@@ -1,7 +1,7 @@
-#include <QtGui>
 #include "settingsdlg.h"
 #include "ui_settingsdlg.h"
-
+#include <QFileDialog>
+#include <QFontDialog>
 
 QSettingsDlg::QSettingsDlg(QWidget *parent, const QFont &fBtn, const QFont &fLabels, const QFont &fResults,
                            int aMaxHButtons, const QStringList &dictPaths) :

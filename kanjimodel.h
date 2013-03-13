@@ -1,7 +1,7 @@
 #ifndef KANJIMODEL_H
 #define KANJIMODEL_H
 
-#include <QtGui>
+#include <QAbstractListModel>
 #include "mainwindow.h"
 
 class MainWindow;

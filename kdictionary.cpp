@@ -1,4 +1,11 @@
 #include "kdictionary.h"
+#include <QFile>
+#include <QTextStream>
+#include <QMutex>
+#include <QDir>
+#include <QProcessEnvironment>
+#include <QCoreApplication>
+#include <QResource>
 
 QKDictionary::QKDictionary(QObject *parent) :
     QObject(parent)

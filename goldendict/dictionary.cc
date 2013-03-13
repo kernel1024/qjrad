@@ -20,18 +20,18 @@ namespace Dictionary {
 
 bool Request::isFinished()
 {
-  return (int)isFinishedFlag;
+  return (isFinishedFlag.load()!=0);
 }
 
 void Request::update()
 {
-  if ( !isFinishedFlag )
+  if ( isFinishedFlag.load() == 0 )
     emit updated();
 }
 
 void Request::finish()
 {
-  if ( !isFinishedFlag )
+  if ( isFinishedFlag.load() == 0 )
   {
     isFinishedFlag.ref();
 

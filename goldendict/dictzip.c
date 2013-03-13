@@ -30,6 +30,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define UNUSED(x) (void)(x)
+
 #define BUFFERSIZE 10240
 
 #define OUT_BUFFER_SIZE 0xffffL
@@ -426,7 +428,6 @@ static int dict_read_header( const char *filename,
 dictData *dict_data_open( const char *filename, int computeCRC )
 {
    dictData    *h = NULL;
-   struct stat sb;
    int         j;
 
    if (!filename)
@@ -509,6 +510,9 @@ char *dict_data_read_ (
    int           i, j;
    int           found, target, lastStamp;
    static int    stamp = 0;
+
+   UNUSED(preFilter);
+   UNUSED(postFilter);
 
    end  = start + size;
 

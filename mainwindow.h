@@ -1,8 +1,14 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include <QtCore>
-#include <QtGui>
+#include <QWidget>
+#include <QMainWindow>
+#include <QString>
+#include <QList>
+#include <QLabel>
+#include <QModelIndex>
+#include <QListWidgetItem>
+
 #include "kdictionary.h"
 #include "goldendictmgr.h"
 #include "goldendict/wordfinder.hh"
