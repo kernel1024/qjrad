@@ -53,7 +53,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->btnReset,SIGNAL(clicked()),this,SLOT(resetRadicals()));
     connect(ui->btnSettings,SIGNAL(clicked()),this,SLOT(settingsDlg()));
     connect(ui->listKanji,SIGNAL(clicked(QModelIndex)),this,SLOT(kanjiClicked(QModelIndex)));
-    connect(ui->listKanji,SIGNAL(activated(QModelIndex)),this,SLOT(kanjiAdd(QModelIndex)));
+    connect(ui->listKanji,SIGNAL(doubleClicked(QModelIndex)),this,SLOT(kanjiAdd(QModelIndex)));
     connect(ui->clearScratch,SIGNAL(clicked()),ui->scratchPad,SLOT(clearEditText()));
 
     connect( ui->scratchPad, SIGNAL(editTextChanged(QString const &)),

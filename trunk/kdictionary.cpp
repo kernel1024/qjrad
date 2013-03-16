@@ -6,6 +6,7 @@
 #include <QProcessEnvironment>
 #include <QCoreApplication>
 #include <QResource>
+#include <QDebug>
 
 QKDictionary::QKDictionary(QObject *parent) :
     QObject(parent)
@@ -23,13 +24,13 @@ bool QKDictionary::loadDictionaries()
     errorString.clear();
 
     // Load radicals dictionary
-    QFile fr(":/data/radkfilex");
+    QFile fr(":/data/radkfilex.utf8");
     if (!fr.open(QIODevice::ReadOnly)) {
         errorString = tr("cannot read kanji lookup table");
         return false;
     }
     QTextStream sr(&fr);
-    sr.setCodec("EUC-JP");
+    sr.setCodec("UTF-8");
     while (!sr.atEnd()) {
         QString s = sr.readLine().trimmed();
         if (s.startsWith('#')) continue; // comment
@@ -47,13 +48,13 @@ bool QKDictionary::loadDictionaries()
     fr.close();
 
     // Load radicals list
-    QFile fp(":/data/kradfilex");
+    QFile fp(":/data/kradfilex.utf8");
     if (!fp.open(QIODevice::ReadOnly)) {
         errorString = tr("cannot read kanji radicals list");
         return false;
     }
     QTextStream sp(&fp);
-    sp.setCodec("EUC-JP");
+    sp.setCodec("UTF-8");
     while (!sp.atEnd()) {
         QString s = sp.readLine().trimmed();
         if (s.startsWith('#')) continue; // comment
