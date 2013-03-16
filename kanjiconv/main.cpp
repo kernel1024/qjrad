@@ -1,3 +1,5 @@
+#include <QDebug>
+#include <QCoreApplication>
 #include <QString>
 #include <QChar>
 #include <QFile>
@@ -20,7 +22,7 @@ bool parseKanjiDict(QString kradfilex, QString kanjidict, QTextStream &qrc) {
         return false;
     }
     QTextStream sp(&fp);
-    sp.setCodec("EUC-JP");
+    sp.setCodec("UTF-8");
     while (!sp.atEnd()) {
         QString s = sp.readLine().trimmed();
         if (s.startsWith('#')) continue; // comment

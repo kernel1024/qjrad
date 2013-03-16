@@ -1,12 +1,12 @@
 <RCC>
     <qresource prefix="/">
-        <file>data/radkfilex</file>
-        <file>data/kradfilex</file>
         <file>data/appicon22.png</file>
         <file>data/appicon32.png</file>
         <file>data/appicon48.png</file>
         <file>data/appicon64.png</file>
         <file>data/appicon128.png</file>
         <file>data/article-style.css</file>
+        <file>data/radkfilex.utf8</file>
+        <file>data/kradfilex.utf8</file>
     </qresource>
 </RCC>
