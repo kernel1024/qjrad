@@ -2,12 +2,14 @@
 #include <QLineEdit>
 #include <QDesktopWidget>
 #include <QUrl>
+#include <QDBusConnection>
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "kanjimodel.h"
 #include "settingsdlg.h"
 #include "miscutils.h"
 #include "global.h"
+#include "dictionary_adaptor.h"
 
 #if QT_VERSION >= QT_VERSION_CHECK(5,0,0)
 #include <QUrlQuery>
@@ -26,6 +28,12 @@ MainWindow::MainWindow(QWidget *parent) :
     dictManager = new CGoldenDictMgr(this);
     netMan = new ArticleNetworkAccessManager(this,dictManager);
     ui->dictViewer->page()->setNetworkAccessManager(netMan);
+
+    dbusDict = new QKDBusDict(this,netMan);
+    new DictionaryAdaptor(dbusDict);
+    QDBusConnection dbus = QDBusConnection::sessionBus();
+    dbus.registerObject("/",dbusDict);
+    dbus.registerService("org.qjrad.dictionary");
 
     infoKanjiTemplate = ui->infoKanji->toHtml();
     ui->infoKanji->clear();

@@ -11,6 +11,7 @@
 #include <QCloseEvent>
 
 #include "kdictionary.h"
+#include "dbusdict.h"
 #include "goldendictmgr.h"
 #include "goldendict/wordfinder.hh"
 
@@ -39,6 +40,7 @@ protected:
     ArticleNetworkAccessManager * netMan;
     CGoldenDictMgr * dictManager;
     WordFinder * wordFinder;
+    QKDBusDict* dbusDict;
 
 
 private:
