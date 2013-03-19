@@ -9,6 +9,8 @@
 #include <QPoint>
 #include <QSize>
 
+#include "dbusdict.h"
+
 class MainWindow;
 
 class CGlobal : public QObject
@@ -17,6 +19,7 @@ class CGlobal : public QObject
 private:
     QStringList dictPaths;
     QDir getHomeDir();
+    QKDBusDict* dbusDict;
 public:
     QFont fontResults, fontBtn, fontLabels;
     int maxHButtons;

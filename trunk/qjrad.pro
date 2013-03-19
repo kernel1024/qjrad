@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui xml webkit network
+QT       += core gui xml webkit network dbus
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets webkitwidgets
 
 TARGET = qjrad
@@ -48,7 +48,9 @@ SOURCES += main.cpp\
     goldendictmgr.cpp \
     global.cpp \
     loadingdlg.cpp \
-    goldendict/wordfinder.cc
+    goldendict/wordfinder.cc \
+    dbusdict.cpp \
+    dbustrandlg.cpp
 
 HEADERS  += mainwindow.h \
     kdictionary.h \
@@ -85,11 +87,14 @@ HEADERS  += mainwindow.h \
     goldendictmgr.h \
     global.h \
     loadingdlg.h \
-    goldendict/wordfinder.hh
+    goldendict/wordfinder.hh \
+    dbusdict.h \
+    dbustrandlg.h
 
 FORMS    += mainwindow.ui \
     settingsdlg.ui \
-    loadingdlg.ui
+    loadingdlg.ui \
+    dbustrandlg.ui
 
 RESOURCES += \
     qjrad.qrc
@@ -99,6 +104,9 @@ SUBDIRS += kanjiconv
 OTHER_FILES += \
     kanjiconv/kanjiconv.pro \
     kanjiconv/main.cpp \
-    kanjiconv/convertdicts
+    kanjiconv/convertdicts \
+    org.qjrad.dictionary.xml
 
 LIBS += -lz
+
+DBUS_ADAPTORS = org.qjrad.dictionary.xml
