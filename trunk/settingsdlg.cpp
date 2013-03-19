@@ -2,6 +2,7 @@
 #include "ui_settingsdlg.h"
 #include <QFileDialog>
 #include <QFontDialog>
+#include <QListWidgetItem>
 
 QSettingsDlg::QSettingsDlg(QWidget *parent, const QFont &fBtn, const QFont &fLabels, const QFont &fResults,
                            int aMaxHButtons, const QStringList &dictPaths) :
@@ -87,5 +88,6 @@ void QSettingsDlg::delDir()
 {
     int idx = ui->dictPaths->currentRow();
     if (idx<0 || idx>=ui->dictPaths->count()) return;
-    ui->dictPaths->removeItemWidget(ui->dictPaths->item(idx));
+    QListWidgetItem *a = ui->dictPaths->takeItem(idx);
+    delete a;
 }
