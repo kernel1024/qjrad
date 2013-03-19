@@ -1,6 +1,5 @@
 #include "global.h"
 #include "mainwindow.h"
-#include "dictionary_adaptor.h"
 #include <QApplication>
 #include <QSettings>
 
@@ -13,12 +12,6 @@ CGlobal::CGlobal(QObject *parent) :
 
 {
     dictPaths.clear();
-
-    dbusDict = new QKDBusDict(this);
-    new DictionaryAdaptor(dbusDict);
-    QDBusConnection dbus = QDBusConnection::sessionBus();
-    dbus.registerObject("/",dbusDict);
-    dbus.registerService("org.qjrad.dictionary");
 }
 
 QString CGlobal::getIndexDir()

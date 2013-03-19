@@ -1,6 +1,6 @@
 #include <QString>
-#include <QWebPage>
-#include <QWebFrame>
+#include <QNetworkRequest>
+#include <QNetworkReply>
 #include <QUrl>
 #if QT_VERSION >= QT_VERSION_CHECK(5,0,0)
 #include <QUrlQuery>
@@ -8,25 +8,20 @@
 
 #include "dbusdict.h"
 
-QKDBusDict::QKDBusDict(QObject *parent) :
+QKDBusDict::QKDBusDict(QObject *parent, ArticleNetworkAccessManager *netManager) :
     QObject(parent)
 {
-    hdlg = new QKDBusTranDlg();
-    connect(hdlg->webView,SIGNAL(loadFinished(bool)),this,SLOT(loadFinished(bool)));
+    netMan = netManager;
 }
 
-QKDBusDict::~QKDBusDict()
-{
-    hdlg->deleteLater();
-}
-
-
-void QKDBusDict::loadFinished(bool ok)
+void QKDBusDict::dataReady()
 {
     QString res = QString();
-    if (ok && hdlg->webView->page()!=NULL)
-        if (hdlg->webView->page()->mainFrame()!=NULL)
-            res = hdlg->webView->page()->mainFrame()->toHtml();
+    QNetworkReply* rep = qobject_cast<QNetworkReply *>(sender());
+    if (rep!=NULL) {
+        res = QString::fromUtf8(rep->readAll());
+        rep->deleteLater();
+    }
 
     emit gotWordTranslation(res);
 }
@@ -43,5 +38,6 @@ void QKDBusDict::findWordTranslation(const QString &text)
     requ.addQueryItem( "word", text );
     req.setQuery(requ);
 #endif
-    hdlg->webView->load(req);
+    QNetworkReply* rep = netMan->get(QNetworkRequest(req));
+    connect(rep,SIGNAL(finished()),this,SLOT(dataReady()));
 }

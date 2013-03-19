@@ -2,23 +2,23 @@
 #define DBUSDICT_H
 
 #include <QObject>
-#include "dbustrandlg.h"
+#include "goldendictmgr.h"
 
 class QKDBusDict : public QObject
 {
     Q_OBJECT
     Q_CLASSINFO("D-Bus Interface", "org.qjrad.dictionary")
 private:
-    QKDBusTranDlg* hdlg;
+    ArticleNetworkAccessManager* netMan;
+
 public:
-    explicit QKDBusDict(QObject *parent = 0);
-    ~QKDBusDict();
+    explicit QKDBusDict(QObject *parent, ArticleNetworkAccessManager* netManager);
 
 signals:
     Q_SCRIPTABLE void gotWordTranslation(const QString& html);
 
 protected slots:
-    void loadFinished(bool ok);
+    void dataReady();
 
 public slots:
     void findWordTranslation(const QString& text);

@@ -49,8 +49,7 @@ SOURCES += main.cpp\
     global.cpp \
     loadingdlg.cpp \
     goldendict/wordfinder.cc \
-    dbusdict.cpp \
-    dbustrandlg.cpp
+    dbusdict.cpp
 
 HEADERS  += mainwindow.h \
     kdictionary.h \
@@ -88,13 +87,11 @@ HEADERS  += mainwindow.h \
     global.h \
     loadingdlg.h \
     goldendict/wordfinder.hh \
-    dbusdict.h \
-    dbustrandlg.h
+    dbusdict.h
 
 FORMS    += mainwindow.ui \
     settingsdlg.ui \
-    loadingdlg.ui \
-    dbustrandlg.ui
+    loadingdlg.ui
 
 RESOURCES += \
     qjrad.qrc
