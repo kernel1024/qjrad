@@ -18,7 +18,16 @@
     <property name="spacing">
      <number>2</number>
     </property>
-    <property name="margin">
+    <property name="leftMargin">
+     <number>2</number>
+    </property>
+    <property name="topMargin">
+     <number>2</number>
+    </property>
+    <property name="rightMargin">
+     <number>2</number>
+    </property>
+    <property name="bottomMargin">
      <number>2</number>
     </property>
     <item>
@@ -49,6 +58,13 @@
              </size>
             </property>
            </spacer>
+          </item>
+          <item>
+           <widget class="QPushButton" name="clearScratch">
+            <property name="text">
+             <string>Clear pad</string>
+            </property>
+           </widget>
           </item>
           <item>
            <widget class="QPushButton" name="btnReset">
@@ -142,13 +158,6 @@ p, li { white-space: pre-wrap; }
             </property>
            </widget>
           </item>
-          <item>
-           <widget class="QPushButton" name="clearScratch">
-            <property name="text">
-             <string>Clear</string>
-            </property>
-           </widget>
-          </item>
          </layout>
         </item>
        </layout>
@@ -198,7 +207,7 @@ p, li { white-space: pre-wrap; }
   <customwidget>
    <class>QWebView</class>
    <extends>QWidget</extends>
-   <header>QtWebKit/QWebView</header>
+   <header>QtWebKitWidgets/QWebView</header>
   </customwidget>
  </customwidgets>
  <tabstops>
@@ -206,7 +215,6 @@ p, li { white-space: pre-wrap; }
   <tabstop>btnReset</tabstop>
   <tabstop>listKanji</tabstop>
   <tabstop>infoKanji</tabstop>
-  <tabstop>clearScratch</tabstop>
  </tabstops>
  <resources/>
  <connections/>
