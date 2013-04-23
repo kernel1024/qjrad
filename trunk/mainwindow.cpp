@@ -135,10 +135,6 @@ void MainWindow::updateSplitters()
     ui->splitter->setCollapsible(0,true);
 
     QList<int> widths;
-    widths.clear();
-    widths << ui->frameRad->width() - cgl->savedSplitterPos;
-    widths << cgl->savedSplitterPos;
-    ui->splitter->setSizes(widths);
 
     ui->splitterMain->setCollapsible(1,true);
     widths.clear();
