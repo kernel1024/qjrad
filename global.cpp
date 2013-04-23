@@ -7,9 +7,7 @@ CGlobal* cgl = NULL;
 
 CGlobal::CGlobal(QObject *parent) :
     QObject(parent),
-    geomFirstWinPos(false),
-    savedSplitterPos(200)
-
+    geomFirstWinPos(false)
 {
     dictPaths.clear();
 }
@@ -60,8 +58,6 @@ void CGlobal::readSettings()
     savedWinSize = se.value("winSize",QSize(200,200)).toSize();
     geomFirstWinPos = true;
     bool okconv;
-    savedSplitterPos = se.value("splitterPos",200).toInt(&okconv);
-    if (!okconv) savedSplitterPos = 200;
     savedDictSplitterPos = se.value("dictSplitterPos",200).toInt(&okconv);
     if (!okconv) savedDictSplitterPos = 200;
     int dcnt = se.value("dictCount",0).toInt();

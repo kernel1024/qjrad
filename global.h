@@ -24,7 +24,6 @@ public:
     bool geomFirstWinPos;
     QPoint savedWinPos;
     QSize savedWinSize;
-    int savedSplitterPos;
     int savedDictSplitterPos;
     // ---
 
