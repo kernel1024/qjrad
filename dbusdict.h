@@ -22,6 +22,7 @@ protected slots:
 
 public slots:
     void findWordTranslation(const QString& text);
+    void showDictionaryWindow(const QString& text);
 
 };
 
