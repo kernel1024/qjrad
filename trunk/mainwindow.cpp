@@ -380,6 +380,11 @@ void MainWindow::kanjiAdd(const QModelIndex &index)
     ui->scratchPad->setEditText(ui->scratchPad->currentText()+k);
 }
 
+void MainWindow::setScratchPadText(const QString &text)
+{
+    ui->scratchPad->setEditText(text);
+}
+
 void MainWindow::closeEvent(QCloseEvent * event)
 {
     cgl->writeSettings(this);

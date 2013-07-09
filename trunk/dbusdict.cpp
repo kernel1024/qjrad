@@ -7,6 +7,7 @@
 #endif
 
 #include "dbusdict.h"
+#include "mainwindow.h"
 
 QKDBusDict::QKDBusDict(QObject *parent, ArticleNetworkAccessManager *netManager) :
     QObject(parent)
@@ -40,4 +41,14 @@ void QKDBusDict::findWordTranslation(const QString &text)
 #endif
     QNetworkReply* rep = netMan->get(QNetworkRequest(req));
     connect(rep,SIGNAL(finished()),this,SLOT(dataReady()));
+}
+
+void QKDBusDict::showDictionaryWindow(const QString &text)
+{
+    MainWindow* w = qobject_cast<MainWindow *>(parent());
+    if (w==NULL) return;
+    w->showNormal();
+    w->raise();
+    w->activateWindow();
+    w->setScratchPadText(text);
 }

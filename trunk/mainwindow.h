@@ -67,6 +67,7 @@ public slots:
     void settingsDlg();
     void kanjiClicked(const QModelIndex & index);
     void kanjiAdd(const QModelIndex & index);
+    void setScratchPadText(const QString & text);
 
     // for GoldenDict
     void prefixMatchUpdated();
