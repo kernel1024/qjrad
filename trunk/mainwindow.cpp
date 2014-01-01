@@ -3,6 +3,7 @@
 #include <QDesktopWidget>
 #include <QUrl>
 #include <QDBusConnection>
+#include <QScrollBar>
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "kanjimodel.h"
@@ -340,6 +341,8 @@ void MainWindow::radicalPressed(const bool)
         statusMsg->setText(tr("Found %1 kanji").arg(foundKanji.length()));
     else
         statusMsg->setText(tr("Ready"));
+
+    ui->listKanji->verticalScrollBar()->setSingleStep(ui->listKanji->verticalScrollBar()->pageStep());
 }
 
 void MainWindow::kanjiClicked(const QModelIndex &index)
