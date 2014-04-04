@@ -5,7 +5,6 @@
  * (c) 2008-2011 Konstantin Isakov <ikm@users.berlios.de>
  * Part of GoldenDict. Licensed under GPLv3 or later, see the LICENSE file */
 
-
 #include <vector>
 #include <string>
 #include <set>
@@ -831,7 +830,13 @@ string ArticleRequest::linkWord( QString const & str )
 
   url.setScheme( "gdlookup" );
   url.setHost( "localhost" );
-  url.setPath( str );
+#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
+  url.addQueryItem( "word", str );
+#else
+  QUrlQuery requ;
+  requ.addQueryItem( "word", str );
+  url.setQuery(requ);
+#endif
 
   string escapedResult = Html::escape( str.toUtf8().data() );
   return string( "<a href=\"" ) + url.toEncoded().data() + "\">" + escapedResult +"</a>";
