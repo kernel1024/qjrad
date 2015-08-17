@@ -49,7 +49,9 @@ SOURCES += main.cpp\
     global.cpp \
     loadingdlg.cpp \
     goldendict/wordfinder.cc \
-    dbusdict.cpp
+    dbusdict.cpp \
+    goldendict/transliteration.cc \
+    goldendict/romaji.cc
 
 HEADERS  += mainwindow.h \
     kdictionary.h \
@@ -87,7 +89,9 @@ HEADERS  += mainwindow.h \
     global.h \
     loadingdlg.h \
     goldendict/wordfinder.hh \
-    dbusdict.h
+    dbusdict.h \
+    goldendict/transliteration.hh \
+    goldendict/romaji.hh
 
 FORMS    += mainwindow.ui \
     settingsdlg.ui \
