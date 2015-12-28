@@ -4,6 +4,7 @@
 #include <QUrl>
 #include <QDBusConnection>
 #include <QScrollBar>
+#include <QMenu>
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "kanjimodel.h"
@@ -61,6 +62,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     connect(ui->btnReset,SIGNAL(clicked()),this,SLOT(resetRadicals()));
     connect(ui->btnSettings,SIGNAL(clicked()),this,SLOT(settingsDlg()));
+    connect(ui->btnOpacity,SIGNAL(clicked()),this,SLOT(opacityList()));
     connect(ui->listKanji,SIGNAL(clicked(QModelIndex)),this,SLOT(kanjiClicked(QModelIndex)));
     connect(ui->listKanji,SIGNAL(doubleClicked(QModelIndex)),this,SLOT(kanjiAdd(QModelIndex)));
     connect(ui->clearScratch,SIGNAL(clicked()),ui->scratchPad,SLOT(clearEditText()));
@@ -415,6 +417,28 @@ void MainWindow::settingsDlg()
     }
     dlg->setParent(NULL);
     delete dlg;
+}
+
+void MainWindow::opacityList()
+{
+    QAction* ac = qobject_cast<QAction* >(sender());
+    if (ac!=NULL) {
+        int op = ac->data().toInt();
+        if (op>0 && op<=100)
+            setWindowOpacity((qreal)op/100.0);
+        return;
+    }
+
+    QMenu* m = new QMenu();
+    for (int i=0;i<=10;i++) {
+        QAction* ac = new QAction(QString("%1%").arg(50+i*5),NULL);
+        connect(ac,SIGNAL(triggered()),this,SLOT(opacityList()));
+        ac->setData(50+i*5);
+        m->addAction(ac);
+    }
+
+    m->setAttribute(Qt::WA_DeleteOnClose,true);
+    m->popup(QCursor::pos());
 }
 
 void MainWindow::wordListItemActivated( QListWidgetItem * item )

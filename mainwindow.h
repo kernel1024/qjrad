@@ -65,6 +65,7 @@ public slots:
     void resetRadicals();
     void radicalPressed(const bool checked);
     void settingsDlg();
+    void opacityList();
     void kanjiClicked(const QModelIndex & index);
     void kanjiAdd(const QModelIndex & index);
     void setScratchPadText(const QString & text);
