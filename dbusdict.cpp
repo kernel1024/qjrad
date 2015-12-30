@@ -2,17 +2,20 @@
 #include <QNetworkRequest>
 #include <QNetworkReply>
 #include <QUrl>
-#if QT_VERSION >= QT_VERSION_CHECK(5,0,0)
 #include <QUrlQuery>
-#endif
 
 #include "dbusdict.h"
 #include "mainwindow.h"
 
 QKDBusDict::QKDBusDict(QObject *parent, ArticleNetworkAccessManager *netManager) :
-    QObject(parent)
+    QObject(parent), m_wnd(NULL)
 {
     netMan = netManager;
+}
+
+void QKDBusDict::setMainWindow(MainWindow *wnd)
+{
+    m_wnd = wnd;
 }
 
 void QKDBusDict::dataReady()
@@ -32,23 +35,17 @@ void QKDBusDict::findWordTranslation(const QString &text)
     QUrl req;
     req.setScheme( "gdlookup" );
     req.setHost( "localhost" );
-#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
-    req.addQueryItem( "word", text );
-#else
     QUrlQuery requ;
     requ.addQueryItem( "word", text );
     req.setQuery(requ);
-#endif
     QNetworkReply* rep = netMan->get(QNetworkRequest(req));
     connect(rep,SIGNAL(finished()),this,SLOT(dataReady()));
 }
 
 void QKDBusDict::showDictionaryWindow(const QString &text)
 {
-    MainWindow* w = qobject_cast<MainWindow *>(parent());
-    if (w==NULL) return;
-    w->showNormal();
-    w->raise();
-    w->activateWindow();
-    w->setScratchPadText(text);
+    m_wnd->showNormal();
+    m_wnd->raise();
+    m_wnd->activateWindow();
+    m_wnd->setScratchPadText(text);
 }

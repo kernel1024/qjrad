@@ -4,15 +4,19 @@
 #include <QObject>
 #include "goldendictmgr.h"
 
+class MainWindow;
+
 class QKDBusDict : public QObject
 {
     Q_OBJECT
     Q_CLASSINFO("D-Bus Interface", "org.qjrad.dictionary")
 private:
     ArticleNetworkAccessManager* netMan;
+    MainWindow* m_wnd;
 
 public:
     explicit QKDBusDict(QObject *parent, ArticleNetworkAccessManager* netManager);
+    void setMainWindow(MainWindow* wnd);
 
 signals:
     Q_SCRIPTABLE void gotWordTranslation(const QString& html);

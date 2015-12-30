@@ -4,15 +4,15 @@
 #
 #-------------------------------------------------
 
-QT       += core gui xml webkit network dbus
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets webkitwidgets
+QT       += core gui xml webenginewidgets widgets network dbus
 
 TARGET = qjrad
 TEMPLATE = app
 
 CONFIG += exceptions \
     rtti \
-    stl
+    stl \
+    c++11
 
 LIBS += -lz
 
@@ -22,76 +22,18 @@ SOURCES += main.cpp\
     kanjimodel.cpp \
     settingsdlg.cpp \
     miscutils.cpp \
-    goldendict/zipfile.cc \
-    goldendict/wstring_qt.cc \
-    goldendict/wstring.cc \
-    goldendict/utf8.cc \
-    goldendict/stardict.cc \
-    goldendict/mutex.cc \
-    goldendict/langcoder.cc \
-    goldendict/folding.cc \
-    goldendict/dsl_details.cc \
-    goldendict/dsl.cc \
-    goldendict/dictzip.c \
-    goldendict/indexedzip.cc \
-    goldendict/iconv.cc \
-    goldendict/htmlescape.cc \
-    goldendict/fsencoding.cc \
-    goldendict/dictionary.cc \
-    goldendict/dictdfiles.cc \
-    goldendict/chunkedstorage.cc \
-    goldendict/btreeidx.cc \
-    goldendict/audiolink.cc \
-    goldendict/xdxf2html.cc \
-    goldendict/file.cc \
-    goldendict/filetype.cc \
-    goldendictmgr.cpp \
     global.cpp \
     loadingdlg.cpp \
-    goldendict/wordfinder.cc \
-    dbusdict.cpp \
-    goldendict/transliteration.cc \
-    goldendict/romaji.cc
+    dbusdict.cpp
 
 HEADERS  += mainwindow.h \
     kdictionary.h \
     kanjimodel.h \
     settingsdlg.h \
     miscutils.h \
-    goldendict/zipfile.hh \
-    goldendict/xdxf2html.hh \
-    goldendict/wstring_qt.hh \
-    goldendict/wstring.hh \
-    goldendict/utf8.hh \
-    goldendict/stardict.hh \
-    goldendict/sptr.hh \
-    goldendict/mutex.hh \
-    goldendict/langcoder.hh \
-    goldendict/ex.hh \
-    goldendict/dsl_details.hh \
-    goldendict/dsl.hh \
-    goldendict/dictzip.h \
-    goldendict/dictionary.hh \
-    goldendict/indexedzip.hh \
-    goldendict/iconv.hh \
-    goldendict/htmlescape.hh \
-    goldendict/fsencoding.hh \
-    goldendict/folding.hh \
-    goldendict/dictdfiles.hh \
-    goldendict/chunkedstorage.hh \
-    goldendict/btreeidx.hh \
-    goldendict/audiolink.hh \
-    goldendict/file.hh \
-    goldendict/inc_diacritic_folding.hh \
-    goldendict/inc_case_folding.hh \
-    goldendict/filetype.hh \
-    goldendictmgr.h \
     global.h \
     loadingdlg.h \
-    goldendict/wordfinder.hh \
-    dbusdict.h \
-    goldendict/transliteration.hh \
-    goldendict/romaji.hh
+    dbusdict.h
 
 FORMS    += mainwindow.ui \
     settingsdlg.ui \
@@ -109,5 +51,7 @@ OTHER_FILES += \
     org.qjrad.dictionary.xml
 
 LIBS += -lz
+
+include( goldendict/goldendict.pri )
 
 DBUS_ADAPTORS = org.qjrad.dictionary.xml

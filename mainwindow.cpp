@@ -2,20 +2,19 @@
 #include <QLineEdit>
 #include <QDesktopWidget>
 #include <QUrl>
-#include <QDBusConnection>
 #include <QScrollBar>
 #include <QMenu>
+#include <QUrlQuery>
+#include <QWebEnginePage>
+#include <QWebEngineProfile>
+#include "goldendict/goldendictmgr.h"
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "kanjimodel.h"
 #include "settingsdlg.h"
 #include "miscutils.h"
 #include "global.h"
-#include "dictionary_adaptor.h"
-
-#if QT_VERSION >= QT_VERSION_CHECK(5,0,0)
-#include <QUrlQuery>
-#endif
+#include "dbusdict.h"
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -26,16 +25,31 @@ MainWindow::MainWindow(QWidget *parent) :
 
     ui->setupUi(this);
 
-    wordFinder = new WordFinder(this);
-    dictManager = new CGoldenDictMgr(this);
-    netMan = new ArticleNetworkAccessManager(this,dictManager);
-    ui->dictViewer->page()->setNetworkAccessManager(netMan);
+    cgl->dbusDict->setMainWindow(this);
 
-    dbusDict = new QKDBusDict(this,netMan);
-    new DictionaryAdaptor(dbusDict);
-    QDBusConnection dbus = QDBusConnection::sessionBus();
-    dbus.registerObject("/",dbusDict);
-    dbus.registerService("org.qjrad.dictionary");
+    layout()->removeWidget(ui->wdictViewer);
+    ui->wdictViewer->setParent(NULL);
+    delete ui->wdictViewer;
+    ui->wdictViewer=NULL;
+
+    dictView = new QWebEngineView(this);
+    dictView->setObjectName(QString::fromUtf8("dictView"));
+    dictView->setUrl(QUrl("about://blank"));
+    ui->splitterDict->addWidget(dictView);
+
+    QWebEnginePage *wp = new QWebEnginePage(cgl->webProfile,this);
+    dictView->setPage(wp);
+
+    connect(cgl->dictManager,&CGoldenDictMgr::showStatusBarMessage,[this](const QString& msg){
+        if (msg.isEmpty())
+            statusBar()->clearMessage();
+        else
+            statusBar()->showMessage(msg);
+    });
+
+    connect(cgl->dictManager,&CGoldenDictMgr::showCriticalMessage,[this](const QString& msg){
+        QMessageBox::critical(this,tr("QJRad - error"),msg);
+    });
 
     infoKanjiTemplate = ui->infoKanji->toHtml();
     ui->infoKanji->clear();
@@ -76,12 +90,12 @@ MainWindow::MainWindow(QWidget *parent) :
     connect( ui->dictWords, SIGNAL( itemSelectionChanged() ),
              this, SLOT( wordListSelectionChanged() ) );
 
-    connect( wordFinder, SIGNAL( updated() ),
+    connect( cgl->wordFinder, SIGNAL( updated() ),
              this, SLOT( prefixMatchUpdated() ) );
-    connect( wordFinder, SIGNAL( finished() ),
+    connect( cgl->wordFinder, SIGNAL( finished() ),
              this, SLOT( prefixMatchFinished() ) );
 
-    connect( ui->dictViewer,SIGNAL(loadFinished(bool)),this,SLOT(dictLoadFinished(bool)));
+    connect( dictView, SIGNAL(loadFinished(bool)),this,SLOT(dictLoadFinished(bool)));
 
     cgl->readSettings();
     ui->scratchPad->setFont(cgl->fontResults);
@@ -93,8 +107,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
     centerWindow();
 
-    wordFinder->clear();
-    dictManager->loadDictionaries();
+    cgl->wordFinder->clear();
+    cgl->loadDictionaries();
 
     showEmptyTranslationPage();
 
@@ -412,8 +426,8 @@ void MainWindow::settingsDlg()
         ui->scratchPad->setFont(cgl->fontResults);
         ui->dictWords->setFont(cgl->fontBtn);
         cgl->setDictPaths(dlg->getDictPaths());
-        wordFinder->clear();
-        dictManager->loadDictionaries();
+        cgl->wordFinder->clear();
+        cgl->loadDictionaries();
     }
     dlg->setParent(NULL);
     delete dlg;
@@ -461,7 +475,7 @@ void MainWindow::wordListSelectionChanged()
 
 void MainWindow::dictLoadFinished(bool)
 {
-    ui->dictViewer->unsetCursor();
+    dictView->unsetCursor();
 }
 
 void MainWindow::prefixMatchUpdated()
@@ -476,7 +490,7 @@ void MainWindow::prefixMatchFinished()
 
 void MainWindow::updateMatchResults(bool finished)
 {
-    WordFinder::SearchResults const & results = wordFinder->getResults();
+    WordFinder::SearchResults const & results = cgl->wordFinder->getResults();
 
     ui->dictWords->setUpdatesEnabled( false );
 
@@ -537,8 +551,8 @@ void MainWindow::updateMatchResults(bool finished)
     {
         ui->dictWords->unsetCursor();
 
-        if ( !wordFinder->getErrorString().isEmpty() )
-            statusBar()->showMessage( tr( "WARNING: %1" ).arg( wordFinder->getErrorString() ) );
+        if ( !cgl->wordFinder->getErrorString().isEmpty() )
+            statusBar()->showMessage( tr( "WARNING: %1" ).arg(cgl->wordFinder->getErrorString() ) );
     }
 }
 
@@ -565,7 +579,7 @@ void MainWindow::translateInputChanged( QString const & newValue )
     if ( !req.size() )
     {
         // An empty request always results in an empty result
-        wordFinder->cancel();
+        cgl->wordFinder->cancel();
         ui->dictWords->clear();
         ui->dictWords->unsetCursor();
 
@@ -574,7 +588,7 @@ void MainWindow::translateInputChanged( QString const & newValue )
 
     ui->dictWords->setCursor( Qt::WaitCursor );
 
-    wordFinder->prefixMatch( req, dictManager->dictionaries );
+    cgl->wordFinder->prefixMatch( req, cgl->dictManager->dictionaries );
 }
 
 void MainWindow::translateInputFinished()
@@ -590,16 +604,12 @@ void MainWindow::showTranslationFor( QString const & inWord )
     QUrl req;
     req.setScheme( "gdlookup" );
     req.setHost( "localhost" );
-#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
-    req.addQueryItem( "word", inWord );
-#else
     QUrlQuery requ;
     requ.addQueryItem( "word", inWord );
     req.setQuery(requ);
-#endif
-    ui->dictViewer->load( req );
+    dictView->load( req );
 
-    ui->dictViewer->setCursor( Qt::WaitCursor );
+    dictView->setCursor( Qt::WaitCursor );
 }
 
 void MainWindow::showEmptyTranslationPage()
@@ -608,16 +618,11 @@ void MainWindow::showEmptyTranslationPage()
 
     req.setScheme( "gdlookup" );
     req.setHost( "localhost" );
-#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
-    req.addQueryItem( "blank", "1" );
-#else
     QUrlQuery requ;
     requ.addQueryItem( "blank", "1" );
     req.setQuery(requ);
-#endif
 
-    ui->dictViewer->load( req );
+    dictView->load( req );
 
-    //QApplication::setOverrideCursor( Qt::WaitCursor );
-    ui->dictViewer->setCursor( Qt::WaitCursor );
+    dictView->setCursor( Qt::WaitCursor );
 }

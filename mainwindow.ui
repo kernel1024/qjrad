@@ -211,13 +211,7 @@ p, li { white-space: pre-wrap; }
            <enum>Qt::Vertical</enum>
           </property>
           <widget class="QListWidget" name="dictWords"/>
-          <widget class="QWebView" name="dictViewer">
-           <property name="url">
-            <url>
-             <string>about:blank</string>
-            </url>
-           </property>
-          </widget>
+          <widget class="QWidget" name="wdictViewer" native="true"/>
          </widget>
         </item>
        </layout>
@@ -229,13 +223,6 @@ p, li { white-space: pre-wrap; }
   <widget class="QStatusBar" name="statusBar"/>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
- <customwidgets>
-  <customwidget>
-   <class>QWebView</class>
-   <extends>QWidget</extends>
-   <header>QtWebKitWidgets/QWebView</header>
-  </customwidget>
- </customwidgets>
  <tabstops>
   <tabstop>btnSettings</tabstop>
   <tabstop>btnReset</tabstop>

@@ -9,11 +9,10 @@
 #include <QModelIndex>
 #include <QListWidgetItem>
 #include <QCloseEvent>
+#include <QWebEngineView>
+#include <QWebEngineProfile>
 
 #include "kdictionary.h"
-#include "dbusdict.h"
-#include "goldendictmgr.h"
-#include "goldendict/wordfinder.hh"
 
 namespace Ui {
     class MainWindow;
@@ -25,6 +24,7 @@ class MainWindow : public QMainWindow
 
 public:
     QString foundKanji;
+    QWebEngineView* dictView;
 
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
@@ -37,11 +37,6 @@ public:
 
 protected:
     QKDictionary dict;
-    ArticleNetworkAccessManager * netMan;
-    CGoldenDictMgr * dictManager;
-    WordFinder * wordFinder;
-    QKDBusDict* dbusDict;
-
 
 private:
     Ui::MainWindow *ui;
@@ -49,6 +44,7 @@ private:
     bool allowLookup;
     QLabel *statusMsg;
     QString infoKanjiTemplate;
+    QWebEngineProfile* webProfile;
 
     void insertOneWidget(QWidget *w, int &row, int &clmn);
     void closeEvent(QCloseEvent * event);

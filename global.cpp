@@ -1,7 +1,14 @@
-#include "global.h"
-#include "mainwindow.h"
 #include <QApplication>
 #include <QSettings>
+#include <QWebEngineProfile>
+#include <QDBusConnection>
+#include "global.h"
+#include "miscutils.h"
+#include "mainwindow.h"
+#include "dbusdict.h"
+#include "goldendict/goldendictmgr.h"
+#include "goldendict/wordfinder.hh"
+#include "dictionary_adaptor.h"
 
 CGlobal* cgl = NULL;
 
@@ -10,6 +17,20 @@ CGlobal::CGlobal(QObject *parent) :
     geomFirstWinPos(false)
 {
     dictPaths.clear();
+
+    dictManager = new CGoldenDictMgr(this);
+    netMan = new ArticleNetworkAccessManager(this,dictManager);
+    wordFinder = new WordFinder(this);
+
+    webProfile = new QWebEngineProfile("qjrad",this);
+    webProfile->installUrlSchemeHandler(QByteArray("gdlookup"), new CGDSchemeHandler());
+
+    dbusDict = new QKDBusDict(this,netMan);
+    new DictionaryAdaptor(dbusDict);
+    QDBusConnection dbus = QDBusConnection::sessionBus();
+    dbus.registerObject("/",dbusDict);
+    dbus.registerService("org.qjrad.dictionary");
+
 }
 
 QString CGlobal::getIndexDir()
@@ -95,21 +116,18 @@ void CGlobal::writeSettings(MainWindow * wnd)
     se.endGroup();
 }
 
+void CGlobal::loadDictionaries()
+{
+    dictManager->loadDictionaries(getDictPaths(),getIndexDir());
+}
+
 QDir CGlobal::getHomeDir()
 {
     QDir result = QDir::home();
 
-    char const * pathInHome =
-        #ifdef Q_OS_WIN32
-            "Application Data/GoldenDict"
-        #else
-            ".qjrad"
-        #endif
-            ;
+    result.mkpath( ".qjrad" );
 
-    result.mkpath( pathInHome );
-
-    if ( !result.cd( pathInHome ) )
+    if ( !result.cd( ".qjrad" ) )
         printf("Cannot use home directory. Write protected.\n");
 
     return result;
