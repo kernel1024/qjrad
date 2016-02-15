@@ -2,7 +2,7 @@
 #define DBUSDICT_H
 
 #include <QObject>
-#include "goldendictmgr.h"
+#include <goldendictlib/goldendictmgr.hh>
 
 class MainWindow;
 

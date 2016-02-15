@@ -4,10 +4,10 @@
 #include <vector>
 #include <QWebEngineUrlRequestJob>
 #include <QDebug>
+#include <goldendictlib/goldendictmgr.hh>
+#include <goldendictlib/dictionary.hh>
 #include "global.h"
 #include "miscutils.h"
-#include "goldendict/goldendictmgr.h"
-#include "goldendict/dictionary.hh"
 
 QColor middleColor(const QColor &c1, const QColor &c2, int mul, int div)
 {

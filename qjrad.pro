@@ -50,8 +50,6 @@ OTHER_FILES += \
     kanjiconv/convertdicts \
     org.qjrad.dictionary.xml
 
-LIBS += -lz
-
-include( goldendict/goldendict.pri )
+LIBS += -lgoldendict
 
 DBUS_ADAPTORS = org.qjrad.dictionary.xml

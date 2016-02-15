@@ -7,7 +7,7 @@
 #include <QUrlQuery>
 #include <QWebEnginePage>
 #include <QWebEngineProfile>
-#include "goldendict/goldendictmgr.h"
+#include <goldendictlib/goldendictmgr.hh>
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "kanjimodel.h"

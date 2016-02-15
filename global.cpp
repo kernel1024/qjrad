@@ -2,12 +2,12 @@
 #include <QSettings>
 #include <QWebEngineProfile>
 #include <QDBusConnection>
+#include <goldendictlib/goldendictmgr.hh>
+#include <goldendictlib/wordfinder.hh>
 #include "global.h"
 #include "miscutils.h"
 #include "mainwindow.h"
 #include "dbusdict.h"
-#include "goldendict/goldendictmgr.h"
-#include "goldendict/wordfinder.hh"
 #include "dictionary_adaptor.h"
 
 CGlobal* cgl = NULL;
