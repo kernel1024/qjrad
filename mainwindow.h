@@ -18,6 +18,17 @@ namespace Ui {
     class MainWindow;
 }
 
+class CAuxDictKeyFilter : public QObject
+{
+    Q_OBJECT
+public:
+    CAuxDictKeyFilter(QObject *parent = 0);
+protected:
+    bool eventFilter(QObject *obj, QEvent *event);
+signals:
+    void keyPressed(int key);
+};
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -45,6 +56,8 @@ private:
     QLabel *statusMsg;
     QString infoKanjiTemplate;
     QWebEngineProfile* webProfile;
+    bool forceFocusToEdit;
+    CAuxDictKeyFilter *keyFilter;
 
     void insertOneWidget(QWidget *w, int &row, int &clmn);
     void closeEvent(QCloseEvent * event);
@@ -76,5 +89,6 @@ public slots:
     void dictLoadFinished(bool ok);
 
 };
+
 
 #endif // MAINWINDOW_H

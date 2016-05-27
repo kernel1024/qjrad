@@ -32,6 +32,8 @@ MainWindow::MainWindow(QWidget *parent) :
     delete ui->wdictViewer;
     ui->wdictViewer=NULL;
 
+    forceFocusToEdit = false;
+
     dictView = new QWebEngineView(this);
     dictView->setObjectName(QString::fromUtf8("dictView"));
     dictView->setUrl(QUrl("about://blank"));
@@ -96,6 +98,12 @@ MainWindow::MainWindow(QWidget *parent) :
              this, SLOT( prefixMatchFinished() ) );
 
     connect( dictView, SIGNAL(loadFinished(bool)),this,SLOT(dictLoadFinished(bool)));
+
+    keyFilter = new CAuxDictKeyFilter(this);
+    ui->scratchPad->installEventFilter(keyFilter);
+    connect(keyFilter, &CAuxDictKeyFilter::keyPressed, [this](int){
+        forceFocusToEdit = true;
+    });
 
     cgl->readSettings();
     ui->scratchPad->setFont(cgl->fontResults);
@@ -401,6 +409,7 @@ void MainWindow::kanjiAdd(const QModelIndex &index)
 
 void MainWindow::setScratchPadText(const QString &text)
 {
+    forceFocusToEdit = false;
     ui->scratchPad->setEditText(text);
 }
 
@@ -476,6 +485,9 @@ void MainWindow::wordListSelectionChanged()
 void MainWindow::dictLoadFinished(bool)
 {
     dictView->unsetCursor();
+
+    if (forceFocusToEdit)
+        ui->scratchPad->setFocus();
 }
 
 void MainWindow::prefixMatchUpdated()
@@ -625,4 +637,20 @@ void MainWindow::showEmptyTranslationPage()
     dictView->load( req );
 
     dictView->setCursor( Qt::WaitCursor );
+}
+
+CAuxDictKeyFilter::CAuxDictKeyFilter(QObject *parent)
+    : QObject(parent)
+{
+
+}
+
+bool CAuxDictKeyFilter::eventFilter(QObject *obj, QEvent *event)
+{
+    if (event->type()==QEvent::KeyPress) {
+        QKeyEvent *ev = static_cast<QKeyEvent *>(event);
+        if (ev!=NULL)
+            emit keyPressed(ev->key());
+    }
+    return QObject::eventFilter(obj,event);
 }
