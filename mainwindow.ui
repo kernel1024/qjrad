@@ -117,7 +117,7 @@
           </property>
           <widget class="QWidget" name="tab">
            <attribute name="title">
-            <string>Kanji</string>
+            <string>Radicals</string>
            </attribute>
            <layout class="QVBoxLayout" name="verticalLayout_3">
             <property name="spacing">
@@ -162,7 +162,7 @@
               <item>
                <widget class="QRadioButton" name="radioKatakana">
                 <property name="text">
-                 <string>Ka&amp;takana</string>
+                 <string>&amp;Katakana</string>
                 </property>
                </widget>
               </item>
