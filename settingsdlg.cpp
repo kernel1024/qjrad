@@ -5,7 +5,7 @@
 #include <QListWidgetItem>
 
 QSettingsDlg::QSettingsDlg(QWidget *parent, const QFont &fBtn, const QFont &fLabels, const QFont &fResults,
-                           int aMaxHButtons, const QStringList &dictPaths) :
+                           int aMaxHButtons, int aMaxKanaHButtons, const QStringList &dictPaths) :
     QDialog(parent),
     ui(new Ui::QSettingsDlg)
 {
@@ -14,11 +14,14 @@ QSettingsDlg::QSettingsDlg(QWidget *parent, const QFont &fBtn, const QFont &fLab
     fontLabels = fLabels;
     fontResults = fResults;
     maxHButtons = aMaxHButtons;
+    maxKanaHButtons = aMaxKanaHButtons;
     ui->buttonsCnt->setValue(maxHButtons);
+    ui->buttonsCntKana->setValue(maxKanaHButtons);
     connect(ui->btnFontButtons,SIGNAL(clicked()),this,SLOT(changeFont()));
     connect(ui->btnFontLabels,SIGNAL(clicked()),this,SLOT(changeFont()));
     connect(ui->btnFontResults,SIGNAL(clicked()),this,SLOT(changeFont()));
     connect(ui->buttonsCnt,SIGNAL(valueChanged(int)),this,SLOT(cntChanged(int)));
+    connect(ui->buttonsCntKana,SIGNAL(valueChanged(int)),this,SLOT(cntChangedKana(int)));
     connect(ui->btnAddPath,SIGNAL(clicked()),this,SLOT(addDir()));
     connect(ui->btnDelPath,SIGNAL(clicked()),this,SLOT(delDir()));
 
@@ -75,6 +78,11 @@ void QSettingsDlg::changeFont()
 void QSettingsDlg::cntChanged(int i)
 {
     maxHButtons = i;
+}
+
+void QSettingsDlg::cntChangedKana(int i)
+{
+    maxKanaHButtons = i;
 }
 
 void QSettingsDlg::addDir()

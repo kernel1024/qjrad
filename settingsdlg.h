@@ -13,9 +13,9 @@ class QSettingsDlg : public QDialog
     
 public:
     QFont fontBtn, fontLabels, fontResults;
-    int maxHButtons;
+    int maxHButtons, maxKanaHButtons;
     explicit QSettingsDlg(QWidget *parent, const QFont &fBtn, const QFont &fLabels, const QFont &fResults,
-                          int aMaxHButtons, const QStringList& dictPaths);
+                          int aMaxHButtons, int aMaxKanaHButtons, const QStringList& dictPaths);
     ~QSettingsDlg();
     QStringList getDictPaths();
     
@@ -26,6 +26,7 @@ private:
 public slots:
     void changeFont();
     void cntChanged(int i);
+    void cntChangedKana(int i);
     void addDir();
     void delDir();
 };

@@ -30,7 +30,7 @@ public:
     QWebEngineProfile* webProfile;
 
     QFont fontResults, fontBtn, fontLabels;
-    int maxHButtons;
+    int maxHButtons, maxKanaHButtons;
     // geometry restore
     bool geomFirstWinPos;
     QPoint savedWinPos;

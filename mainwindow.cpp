@@ -105,12 +105,16 @@ MainWindow::MainWindow(QWidget *parent) :
         forceFocusToEdit = true;
     });
 
+    connect(ui->radioHiragana,SIGNAL(clicked(bool)), this, SLOT(updateKana(bool)));
+    connect(ui->radioKatakana,SIGNAL(clicked(bool)), this, SLOT(updateKana(bool)));
+
     cgl->readSettings();
     ui->scratchPad->setFont(cgl->fontResults);
     ui->dictWords->setFont(cgl->fontBtn);
 
     allowLookup = false;
-    renderButtons();
+    renderRadicalsButtons();
+    renderKanaButtons();
     allowLookup = true;
 
     centerWindow();
@@ -179,6 +183,12 @@ void MainWindow::clearRadButtons()
         buttons.takeFirst()->deleteLater();
 }
 
+void MainWindow::clearKanaButtons()
+{
+    while (!kanaButtons.isEmpty())
+        kanaButtons.takeFirst()->deleteLater();
+}
+
 QList<int> MainWindow::getSplittersSize()
 {
     return ui->splitter->sizes();
@@ -197,7 +207,7 @@ int MainWindow::getKanjiGrade(const QChar &kanji)
         return 0;
 }
 
-void MainWindow::renderButtons()
+void MainWindow::renderRadicalsButtons()
 {
     int btnWidth = -1;
 
@@ -219,8 +229,8 @@ void MainWindow::renderButtons()
             rl->setFrameShape(QFrame::Box);
             w = rl;
             rmark=ri.strokes;
+            insertOneWidget(w,row,clmn,false);
         }
-        insertOneWidget(w,row,clmn);
         // insert button
         QPushButton *pb = new QPushButton(ri.radical,ui->frameRad);
         pb->setFlat(true);
@@ -242,18 +252,57 @@ void MainWindow::renderButtons()
         pb->setMaximumHeight(btnWidth+2);
         connect(pb,SIGNAL(clicked(bool)),this,SLOT(radicalPressed(bool)));
         w = pb;
-        insertOneWidget(w,row,clmn);
+        insertOneWidget(w,row,clmn,false);
     }
-
 }
 
-void MainWindow::insertOneWidget(QWidget *w, int &row, int &clmn)
+void MainWindow::renderKanaButtons()
+{
+    int btnWidth = -1;
+
+    clearKanaButtons();
+
+    ui->gridRad->setHorizontalSpacing(2);
+    ui->gridRad->setVerticalSpacing(2);
+    int row=0, clmn=0;
+
+    QWidget *w;
+    for (int i=0x3041;i<=0x3096;i++) {
+        // insert button
+        QChar k = QChar(i);
+        if (ui->radioKatakana->isChecked())
+            k = QChar(i+(0x30A0-0x3040));
+        QPushButton *pb = new QPushButton(k,ui->frameKana);
+        pb->setFlat(true);
+        pb->setFont(cgl->fontBtn);
+        if (btnWidth<0) {
+            QFontMetrics fm(pb->font());
+            btnWidth = 13*fm.width(QChar(0x9fa0))/10;
+        }
+        pb->setMinimumWidth(btnWidth);
+        pb->setMinimumHeight(btnWidth);
+        pb->setMaximumHeight(btnWidth+2);
+        connect(pb,&QPushButton::clicked,this,&MainWindow::kanaPressed);
+        w = pb;
+        insertOneWidget(w,row,clmn,true);
+    }
+}
+
+void MainWindow::insertOneWidget(QWidget *w, int &row, int &clmn, bool isKana)
 {
     if (w!=NULL) {
-        ui->gridRad->addWidget(w,row,clmn);
-        buttons << w;
+        if (!isKana) {
+            ui->gridRad->addWidget(w,row,clmn);
+            buttons << w;
+        } else {
+            ui->gridKana->addWidget(w,row,clmn);
+            kanaButtons << w;
+        }
         clmn++;
-        if (clmn>=cgl->maxHButtons) {
+        int max = cgl->maxHButtons;
+        if (isKana)
+            max = cgl->maxKanaHButtons;
+        if (clmn>=max) {
             clmn=0;
             row++;
         }
@@ -272,6 +321,11 @@ void MainWindow::resetRadicals()
     allowLookup = true;
     radicalPressed(false);
     statusMsg->setText(tr("Ready"));
+}
+
+void MainWindow::updateKana(const bool)
+{
+    renderKanaButtons();
 }
 
 void MainWindow::radicalPressed(const bool)
@@ -369,6 +423,15 @@ void MainWindow::radicalPressed(const bool)
     ui->listKanji->verticalScrollBar()->setSingleStep(ui->listKanji->verticalScrollBar()->pageStep());
 }
 
+void MainWindow::kanaPressed(const bool)
+{
+    QPushButton *btn = qobject_cast<QPushButton *>(sender());
+    if (btn==NULL) return;
+
+    QString k = btn->text();
+    ui->scratchPad->setEditText(ui->scratchPad->currentText()+k);
+}
+
 void MainWindow::kanjiClicked(const QModelIndex &index)
 {
     if (!index.isValid()) return;
@@ -422,14 +485,16 @@ void MainWindow::closeEvent(QCloseEvent * event)
 void MainWindow::settingsDlg()
 {
     QSettingsDlg *dlg = new QSettingsDlg(this,cgl->fontBtn,cgl->fontLabels,cgl->fontResults,cgl->maxHButtons,
-                                         cgl->getDictPaths());
+                                         cgl->maxKanaHButtons, cgl->getDictPaths());
     if (dlg->exec()) {
         cgl->fontBtn = dlg->fontBtn;
         cgl->fontLabels = dlg->fontLabels;
         cgl->fontResults = dlg->fontResults;
         cgl->maxHButtons = dlg->maxHButtons;
+        cgl->maxKanaHButtons = dlg->maxKanaHButtons;
         allowLookup = false;
-        renderButtons();
+        renderRadicalsButtons();
+        renderKanaButtons();
         allowLookup = true;
         resetRadicals();
         ui->scratchPad->setFont(cgl->fontResults);

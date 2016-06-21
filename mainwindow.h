@@ -40,8 +40,10 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
-    void renderButtons();
+    void renderRadicalsButtons();
+    void renderKanaButtons();
     void clearRadButtons();
+    void clearKanaButtons();
     QList<int> getSplittersSize();
     QList<int> getDictSplittersSize();
     int getKanjiGrade(const QChar &kanji);
@@ -51,7 +53,7 @@ protected:
 
 private:
     Ui::MainWindow *ui;
-    QObjectList buttons;
+    QObjectList buttons, kanaButtons;
     bool allowLookup;
     QLabel *statusMsg;
     QString infoKanjiTemplate;
@@ -59,7 +61,7 @@ private:
     bool forceFocusToEdit;
     CAuxDictKeyFilter *keyFilter;
 
-    void insertOneWidget(QWidget *w, int &row, int &clmn);
+    void insertOneWidget(QWidget *w, int &row, int &clmn, bool isKana);
     void closeEvent(QCloseEvent * event);
 
     void showTranslationFor( QString const & inWord );
@@ -72,7 +74,9 @@ public slots:
     void updateSplitters();
     // event handlers
     void resetRadicals();
+    void updateKana(const bool checked);
     void radicalPressed(const bool checked);
+    void kanaPressed(const bool checked);
     void settingsDlg();
     void opacityList();
     void kanjiClicked(const QModelIndex & index);
