@@ -83,6 +83,12 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->listKanji,SIGNAL(doubleClicked(QModelIndex)),this,SLOT(kanjiAdd(QModelIndex)));
     connect(ui->clearScratch,SIGNAL(clicked()),ui->scratchPad,SLOT(clearEditText()));
 
+    connect(ui->btnBackspace,&QPushButton::clicked,[this](bool){
+        if (!ui->scratchPad->currentText().isEmpty())
+            ui->scratchPad->setEditText(ui->scratchPad->currentText().left(
+                                            ui->scratchPad->currentText().length()-1));
+    });
+
     connect( ui->scratchPad, SIGNAL(editTextChanged(QString const &)),
              this, SLOT( translateInputChanged( QString const & ) ) );
 
@@ -258,16 +264,35 @@ void MainWindow::renderRadicalsButtons()
 
 void MainWindow::renderKanaButtons()
 {
+    QList<int> kana = {
+        0x3042, 0x3044, 0x3046, 0x3048, 0x304A,
+        0x3041, 0x3043, 0x3045, 0x3047, 0x3049,
+        0x304b, 0x304d, 0x304f, 0x3051, 0x3053,
+        0x304c, 0x304e, 0x3050, 0x3052, 0x3054,
+        0x3055, 0x3057, 0x3059, 0x305b, 0x305d,
+        0x3056, 0x3058, 0x305a, 0x305c, 0x305e,
+        0x305f, 0x3061, 0x3064, 0x3066, 0x3068,
+        0x3060, 0x3062, 0x3065, 0x3067, 0x3069,
+        0x306a, 0x306b, 0x306c, 0x306d, 0x306e,
+        0x306f, 0x3072, 0x3075, 0x3078, 0x307b,
+        0x3070, 0x3073, 0x3076, 0x3079, 0x307c,
+        0x3071, 0x3074, 0x3077, 0x307a, 0x307d,
+        0x307e, 0x307f, 0x3080, 0x3081, 0x3082,
+        0x3089, 0x308a, 0x308b, 0x308c, 0x308d,
+        0x308f, 0x3090, 0x3091, 0x3092, 0x3093,
+        0x3084, 0x3086, 0x3088, 0x3094, 0x3095,
+        0x3083, 0x3085, 0x3087, 0x3063, 0x3096
+    };
     int btnWidth = -1;
 
     clearKanaButtons();
 
-    ui->gridRad->setHorizontalSpacing(2);
-    ui->gridRad->setVerticalSpacing(2);
+    ui->gridKana->setHorizontalSpacing(2);
+    ui->gridKana->setVerticalSpacing(2);
     int row=0, clmn=0;
 
     QWidget *w;
-    for (int i=0x3041;i<=0x3096;i++) {
+    foreach (const int i, kana) {
         // insert button
         QChar k = QChar(i);
         if (ui->radioKatakana->isChecked())

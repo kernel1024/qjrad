@@ -147,6 +147,15 @@
             <string>Kana</string>
            </attribute>
            <layout class="QVBoxLayout" name="verticalLayout_4">
+            <property name="spacing">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>2</number>
+            </property>
+            <property name="bottomMargin">
+             <number>2</number>
+            </property>
             <item>
              <layout class="QHBoxLayout" name="horizontalLayout_4">
               <item>
@@ -262,6 +271,17 @@ p, li { white-space: pre-wrap; }
             </property>
            </widget>
           </item>
+          <item>
+           <widget class="QPushButton" name="btnBackspace">
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset theme="edit-clear-locationbar-rtl">
+              <normaloff>.</normaloff>.</iconset>
+            </property>
+           </widget>
+          </item>
          </layout>
         </item>
        </layout>
@@ -306,6 +326,14 @@ p, li { white-space: pre-wrap; }
   <tabstop>btnReset</tabstop>
   <tabstop>listKanji</tabstop>
   <tabstop>infoKanji</tabstop>
+  <tabstop>btnOpacity</tabstop>
+  <tabstop>clearScratch</tabstop>
+  <tabstop>tabWidget</tabstop>
+  <tabstop>radioHiragana</tabstop>
+  <tabstop>radioKatakana</tabstop>
+  <tabstop>scratchPad</tabstop>
+  <tabstop>btnBackspace</tabstop>
+  <tabstop>dictWords</tabstop>
  </tabstops>
  <resources/>
  <connections/>
