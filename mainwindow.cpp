@@ -157,10 +157,6 @@ void MainWindow::centerWindow()
         screen = desktop->screenNumber(this);
     }
     QRect rect(desktop->availableGeometry(screen));
-    int h = 60*rect.height()/100;
-    if (h<650) h = qMin(650,75*rect.height()/100);
-    QSize nw(w->height(),h);
-    resize(nw);
     move(rect.width()/2 - frameGeometry().width()/2,
          rect.height()/2 - frameGeometry().height()/2);
 }
