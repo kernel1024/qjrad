@@ -12,7 +12,8 @@ TEMPLATE = app
 CONFIG += exceptions \
     rtti \
     stl \
-    c++11
+    c++11 \
+    link_pkgconfig
 
 LIBS += -lz
 
@@ -24,7 +25,9 @@ SOURCES += main.cpp\
     miscutils.cpp \
     global.cpp \
     loadingdlg.cpp \
-    dbusdict.cpp
+    dbusdict.cpp \
+    regiongrabber.cpp \
+    xcbtools.cpp
 
 HEADERS  += mainwindow.h \
     kdictionary.h \
@@ -33,7 +36,9 @@ HEADERS  += mainwindow.h \
     miscutils.h \
     global.h \
     loadingdlg.h \
-    dbusdict.h
+    dbusdict.h \
+    regiongrabber.h \
+    xcbtools.h
 
 FORMS    += mainwindow.ui \
     settingsdlg.ui \
@@ -43,6 +48,21 @@ RESOURCES += \
     qjrad.qrc
 
 SUBDIRS += kanjiconv
+
+packagesExist(tesseract) {
+    CONFIG += use_ocr
+    message("Using Tesseract OCR:  YES")
+} else {
+    message("Using Tesseract OCR:  NO")
+}
+
+use_ocr {
+    DEFINES += WITH_OCR=1
+    QT += x11extras
+    QMAKE_CXXFLAGS += -Wno-ignored-qualifiers
+    PKGCONFIG += tesseract xcb xcb-xfixes xcb-image
+    LIBS += -llept
+}
 
 OTHER_FILES += \
     kanjiconv/kanjiconv.pro \

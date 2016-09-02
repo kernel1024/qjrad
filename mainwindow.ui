@@ -54,6 +54,13 @@
            </widget>
           </item>
           <item>
+           <widget class="QPushButton" name="btnCapture">
+            <property name="text">
+             <string>Capture</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <spacer name="horizontalSpacer">
             <property name="orientation">
              <enum>Qt::Horizontal</enum>
@@ -323,17 +330,18 @@ p, li { white-space: pre-wrap; }
  <layoutdefault spacing="6" margin="11"/>
  <tabstops>
   <tabstop>btnSettings</tabstop>
+  <tabstop>btnOpacity</tabstop>
+  <tabstop>btnCapture</tabstop>
+  <tabstop>clearScratch</tabstop>
   <tabstop>btnReset</tabstop>
+  <tabstop>tabWidget</tabstop>
+  <tabstop>dictWords</tabstop>
   <tabstop>listKanji</tabstop>
   <tabstop>infoKanji</tabstop>
-  <tabstop>btnOpacity</tabstop>
-  <tabstop>clearScratch</tabstop>
-  <tabstop>tabWidget</tabstop>
-  <tabstop>radioHiragana</tabstop>
-  <tabstop>radioKatakana</tabstop>
   <tabstop>scratchPad</tabstop>
   <tabstop>btnBackspace</tabstop>
-  <tabstop>dictWords</tabstop>
+  <tabstop>radioKatakana</tabstop>
+  <tabstop>radioHiragana</tabstop>
  </tabstops>
  <resources/>
  <connections/>

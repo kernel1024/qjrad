@@ -15,6 +15,7 @@
 #include "miscutils.h"
 #include "global.h"
 #include "dbusdict.h"
+#include "regiongrabber.h"
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -76,12 +77,13 @@ MainWindow::MainWindow(QWidget *parent) :
     statusMsg->setAlignment(Qt::AlignCenter);
     statusBar()->addPermanentWidget(statusMsg);
 
-    connect(ui->btnReset,SIGNAL(clicked()),this,SLOT(resetRadicals()));
-    connect(ui->btnSettings,SIGNAL(clicked()),this,SLOT(settingsDlg()));
-    connect(ui->btnOpacity,SIGNAL(clicked()),this,SLOT(opacityList()));
-    connect(ui->listKanji,SIGNAL(clicked(QModelIndex)),this,SLOT(kanjiClicked(QModelIndex)));
-    connect(ui->listKanji,SIGNAL(doubleClicked(QModelIndex)),this,SLOT(kanjiAdd(QModelIndex)));
-    connect(ui->clearScratch,SIGNAL(clicked()),ui->scratchPad,SLOT(clearEditText()));
+    connect(ui->btnReset,&QPushButton::clicked,this,&MainWindow::resetRadicals);
+    connect(ui->btnSettings,&QPushButton::clicked,this,&MainWindow::settingsDlg);
+    connect(ui->btnOpacity,&QPushButton::clicked,this,&MainWindow::opacityList);
+    connect(ui->listKanji,&QListView::clicked,this,&MainWindow::kanjiClicked);
+    connect(ui->listKanji,&QListView::doubleClicked,this,&MainWindow::kanjiAdd);
+    connect(ui->clearScratch,&QPushButton::clicked,ui->scratchPad,&QComboBox::clearEditText);
+    connect(ui->btnCapture,&QPushButton::clicked,this,&MainWindow::screenCapture);
 
     connect(ui->btnBackspace,&QPushButton::clicked,[this](bool){
         if (!ui->scratchPad->currentText().isEmpty())
@@ -89,21 +91,13 @@ MainWindow::MainWindow(QWidget *parent) :
                                             ui->scratchPad->currentText().length()-1));
     });
 
-    connect( ui->scratchPad, SIGNAL(editTextChanged(QString const &)),
-             this, SLOT( translateInputChanged( QString const & ) ) );
+    connect(ui->scratchPad,&QComboBox::editTextChanged,this,&MainWindow::translateInputChanged);
+    connect(ui->scratchPad->lineEdit(),&QLineEdit::returnPressed,this,&MainWindow::translateInputFinished);
+    connect(ui->dictWords,&QListWidget::itemSelectionChanged,this,&MainWindow::wordListSelectionChanged);
+    connect(cgl->wordFinder,&WordFinder::updated,this,&MainWindow::prefixMatchUpdated);
+    connect(cgl->wordFinder,&WordFinder::finished,this,&MainWindow::prefixMatchFinished);
 
-    connect( ui->scratchPad->lineEdit(), SIGNAL( returnPressed() ),
-             this, SLOT( translateInputFinished() ) );
-
-    connect( ui->dictWords, SIGNAL( itemSelectionChanged() ),
-             this, SLOT( wordListSelectionChanged() ) );
-
-    connect( cgl->wordFinder, SIGNAL( updated() ),
-             this, SLOT( prefixMatchUpdated() ) );
-    connect( cgl->wordFinder, SIGNAL( finished() ),
-             this, SLOT( prefixMatchFinished() ) );
-
-    connect( dictView, SIGNAL(loadFinished(bool)),this,SLOT(dictLoadFinished(bool)));
+    connect( dictView, &QWebEngineView::loadFinished,this,&MainWindow::dictLoadFinished);
 
     keyFilter = new CAuxDictKeyFilter(this);
     ui->scratchPad->installEventFilter(keyFilter);
@@ -111,8 +105,8 @@ MainWindow::MainWindow(QWidget *parent) :
         forceFocusToEdit = true;
     });
 
-    connect(ui->radioHiragana,SIGNAL(clicked(bool)), this, SLOT(updateKana(bool)));
-    connect(ui->radioKatakana,SIGNAL(clicked(bool)), this, SLOT(updateKana(bool)));
+    connect(ui->radioHiragana,&QRadioButton::clicked, this, &MainWindow::updateKana);
+    connect(ui->radioKatakana,&QRadioButton::clicked, this, &MainWindow::updateKana);
 
     cgl->readSettings();
     ui->scratchPad->setFont(cgl->fontResults);
@@ -130,7 +124,11 @@ MainWindow::MainWindow(QWidget *parent) :
 
     showEmptyTranslationPage();
 
-    QTimer::singleShot(1000,this,SLOT(updateSplitters()));
+    QTimer::singleShot(1000,this,&MainWindow::updateSplitters);
+#ifndef WITH_OCR
+    ui->btnCapture->setEnabled(false);
+    ui->btnCapture->hide();
+#endif
 }
 
 MainWindow::~MainWindow()
@@ -252,7 +250,7 @@ void MainWindow::renderRadicalsButtons()
         pb->setMinimumWidth(btnWidth);
         pb->setMinimumHeight(btnWidth);
         pb->setMaximumHeight(btnWidth+2);
-        connect(pb,SIGNAL(clicked(bool)),this,SLOT(radicalPressed(bool)));
+        connect(pb,&QPushButton::clicked,this,&MainWindow::radicalPressed);
         w = pb;
         insertOneWidget(w,row,clmn,false);
     }
@@ -497,6 +495,76 @@ void MainWindow::setScratchPadText(const QString &text)
     ui->scratchPad->setEditText(text);
 }
 
+void MainWindow::screenCapture()
+{
+#ifdef WITH_OCR
+    hide();
+    QApplication::processEvents();
+
+    QTimer::singleShot(200, [this](){
+        RegionGrabber* rgnGrab = new RegionGrabber(lastGrabbedRegion);
+        connect(rgnGrab, &RegionGrabber::regionGrabbed,
+                this, &MainWindow::regionGrabbed);
+        connect(rgnGrab, &RegionGrabber::regionUpdated,
+                this, &MainWindow::regionUpdated);
+    });
+#endif
+}
+
+void MainWindow::regionGrabbed(const QPixmap &pic)
+{
+#ifdef WITH_OCR
+    QString text;
+
+    if ( !pic.isNull() )
+    {
+        if (ocr!=NULL && pic.width()>20 && pic.height()>20) {
+            QImage cpx = pic.toImage();
+            ocr->SetImage(Image2PIX(cpx));
+            char* rtext = ocr->GetUTF8Text();
+            QString s = QString::fromUtf8(rtext);
+            delete[] rtext;
+            QStringList sl = s.split('\n',QString::SkipEmptyParts);
+            int maxlen = 0;
+            for (int i=0;i<sl.count();i++)
+                if (sl.at(i).length()>maxlen)
+                    maxlen = sl.at(i).length();
+            if (maxlen<sl.count()) { // vertical kanji block, needs transpose
+                QStringList sl2;
+                sl2.clear();
+                for (int i=0;i<maxlen;i++)
+                    sl2 << QString();
+                for (int i=0;i<sl.count();i++)
+                    for (int j=0;j<sl.at(i).length();j++)
+                        sl2[maxlen-j-1][i]=sl[i][j];
+                sl = sl2;
+            }
+            if (!sl.isEmpty()) {
+                text = sl.join(QString(" "));
+                text.replace(QRegExp("[\r\n]+")," ");
+            }
+        }
+    }
+
+    RegionGrabber* rgnGrab = qobject_cast<RegionGrabber *>(sender());
+    if(rgnGrab)
+        rgnGrab->deleteLater();
+
+    QApplication::restoreOverrideCursor();
+    restoreWindow();
+
+    if (!text.isEmpty())
+        ui->scratchPad->setEditText(text);
+#else
+    Q_UNUSED(pic)
+#endif
+}
+
+void MainWindow::regionUpdated(const QRect &region)
+{
+    lastGrabbedRegion = region;
+}
+
 void MainWindow::closeEvent(QCloseEvent * event)
 {
     cgl->writeSettings(this);
@@ -541,7 +609,7 @@ void MainWindow::opacityList()
     QMenu* m = new QMenu();
     for (int i=0;i<=10;i++) {
         QAction* ac = new QAction(QString("%1%").arg(50+i*5),NULL);
-        connect(ac,SIGNAL(triggered()),this,SLOT(opacityList()));
+        connect(ac,&QAction::triggered,this,&MainWindow::opacityList);
         ac->setData(50+i*5);
         m->addAction(ac);
     }
@@ -739,4 +807,11 @@ bool CAuxDictKeyFilter::eventFilter(QObject *obj, QEvent *event)
             emit keyPressed(ev->key());
     }
     return QObject::eventFilter(obj,event);
+}
+
+void MainWindow::restoreWindow()
+{
+    showNormal();
+    raise();
+    activateWindow();
 }

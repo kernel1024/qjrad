@@ -9,6 +9,11 @@
 #include <QPoint>
 #include <QSize>
 
+#ifdef WITH_OCR
+#include <baseapi.h>
+#include <leptonica/allheaders.h>
+#endif
+
 class MainWindow;
 class ArticleNetworkAccessManager;
 class CGoldenDictMgr;
@@ -53,5 +58,13 @@ public slots:
 };
 
 extern CGlobal* cgl;
+
+#ifdef WITH_OCR
+extern tesseract::TessBaseAPI* ocr;
+
+tesseract::TessBaseAPI *initializeOCR();
+PIX* Image2PIX(QImage& qImage);
+QImage PIX2QImage(PIX *pixImage);
+#endif
 
 #endif // GLOBAL_H

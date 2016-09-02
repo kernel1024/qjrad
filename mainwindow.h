@@ -11,6 +11,7 @@
 #include <QCloseEvent>
 #include <QWebEngineView>
 #include <QWebEngineProfile>
+#include <QPixmap>
 
 #include "kdictionary.h"
 
@@ -60,6 +61,7 @@ private:
     QWebEngineProfile* webProfile;
     bool forceFocusToEdit;
     CAuxDictKeyFilter *keyFilter;
+    QRect lastGrabbedRegion;
 
     void insertOneWidget(QWidget *w, int &row, int &clmn, bool isKana);
     void closeEvent(QCloseEvent * event);
@@ -68,6 +70,7 @@ private:
     void showEmptyTranslationPage();
     void updateMatchResults( bool finished );
 
+    void restoreWindow();
 public slots:
     // window geometry and misc
     void centerWindow();
@@ -82,6 +85,9 @@ public slots:
     void kanjiClicked(const QModelIndex & index);
     void kanjiAdd(const QModelIndex & index);
     void setScratchPadText(const QString & text);
+    void screenCapture();
+    void regionGrabbed(const QPixmap &pic);
+    void regionUpdated(const QRect &region);
 
     // for GoldenDict
     void prefixMatchUpdated();
