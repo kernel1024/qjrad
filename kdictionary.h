@@ -18,6 +18,7 @@ public:
     QString kanji;
     QKRadItem();
     ~QKRadItem();
+    QKRadItem(const QKRadItem &other);
     QKRadItem(const QChar &aRadical);
     QKRadItem(const QChar &aRadical, int aStrokes);
     QKRadItem(const QChar &aRadical, int aStrokes, const QString &aJisCode, const QString &aKanji);
@@ -40,6 +41,7 @@ public:
     QStringList meaning;
     QKanjiInfo();
     ~QKanjiInfo();
+    QKanjiInfo(const QKanjiInfo &other);
     QKanjiInfo(const QChar &aKanji, const QStringList &aParts,
                const QStringList &aOnReading, const QStringList &aKunReading, const QStringList &aMeaning);
     QKanjiInfo &operator=(const QKanjiInfo &other);

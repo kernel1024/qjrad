@@ -20,6 +20,7 @@ Debug/
 Release/
 *.log
 *.autosave
+.*.stash
 
 # QtCreator project files
 *.pro.user

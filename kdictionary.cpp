@@ -151,6 +151,14 @@ QKRadItem::~QKRadItem()
     kanji.clear();
 }
 
+QKRadItem::QKRadItem(const QKRadItem &other)
+{
+    radical = other.radical;
+    strokes = other.strokes;
+    jisCode = other.jisCode;
+    kanji = other.kanji;
+}
+
 QKRadItem::QKRadItem(const QChar &aRadical)
 {
     radical = aRadical;
@@ -225,6 +233,15 @@ QKanjiInfo::~QKanjiInfo()
     onReading.clear();
     kunReading.clear();
     meaning.clear();
+}
+
+QKanjiInfo::QKanjiInfo(const QKanjiInfo &other)
+{
+    kanji = other.kanji;
+    parts = other.parts;
+    onReading = other.onReading;
+    kunReading = other.kunReading;
+    meaning = other.meaning;
 }
 
 QKanjiInfo::QKanjiInfo(const QChar &aKanji, const QStringList &aParts, const QStringList &aOnReading, const QStringList &aKunReading, const QStringList &aMeaning)
