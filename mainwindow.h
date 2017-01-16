@@ -95,6 +95,7 @@ public slots:
     void translateInputChanged( QString const & );
     void translateInputFinished();
     void wordListItemActivated( QListWidgetItem * );
+    void wordListLookupItem( QListWidgetItem * item);
     void wordListSelectionChanged();
     void dictLoadFinished(bool ok);
 

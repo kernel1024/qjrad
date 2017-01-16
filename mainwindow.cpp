@@ -94,6 +94,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->scratchPad,&QComboBox::editTextChanged,this,&MainWindow::translateInputChanged);
     connect(ui->scratchPad->lineEdit(),&QLineEdit::returnPressed,this,&MainWindow::translateInputFinished);
     connect(ui->dictWords,&QListWidget::itemSelectionChanged,this,&MainWindow::wordListSelectionChanged);
+    connect(ui->dictWords,&QListWidget::itemDoubleClicked,this,&MainWindow::wordListLookupItem);
     connect(cgl->wordFinder,&WordFinder::updated,this,&MainWindow::prefixMatchUpdated);
     connect(cgl->wordFinder,&WordFinder::finished,this,&MainWindow::prefixMatchFinished);
 
@@ -626,6 +627,13 @@ void MainWindow::wordListItemActivated( QListWidgetItem * item )
         ui->scratchPad->addItem(newValue);
 
     showTranslationFor( newValue );
+}
+
+void MainWindow::wordListLookupItem(QListWidgetItem *item)
+{
+    QString newValue = item->text();
+
+    ui->scratchPad->setEditText(newValue);
 }
 
 void MainWindow::wordListSelectionChanged()
