@@ -1,7 +1,6 @@
 #include <QApplication>
 #include <QMessageBox>
 #include <QSettings>
-#include <QWebEngineProfile>
 #include <QDBusConnection>
 #include <goldendictlib/goldendictmgr.hh>
 #include <goldendictlib/wordfinder.hh>
@@ -22,9 +21,6 @@ CGlobal::CGlobal(QObject *parent) :
     dictManager = new CGoldenDictMgr(this);
     netMan = new ArticleNetworkAccessManager(this,dictManager);
     wordFinder = new WordFinder(this);
-
-    webProfile = new QWebEngineProfile("qjrad",this);
-    webProfile->installUrlSchemeHandler(QByteArray("gdlookup"), new CGDSchemeHandler());
 
     dbusDict = new QKDBusDict(this,netMan);
     new DictionaryAdaptor(dbusDict);

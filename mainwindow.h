@@ -9,8 +9,7 @@
 #include <QModelIndex>
 #include <QListWidgetItem>
 #include <QCloseEvent>
-#include <QWebEngineView>
-#include <QWebEngineProfile>
+#include <QTextBrowser>
 #include <QPixmap>
 
 #include "kdictionary.h"
@@ -36,7 +35,7 @@ class MainWindow : public QMainWindow
 
 public:
     QString foundKanji;
-    QWebEngineView* dictView;
+    QTextBrowser* dictView;
 
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
@@ -58,7 +57,6 @@ private:
     bool allowLookup;
     QLabel *statusMsg;
     QString infoKanjiTemplate;
-    QWebEngineProfile* webProfile;
     bool forceFocusToEdit;
     CAuxDictKeyFilter *keyFilter;
     QRect lastGrabbedRegion;
@@ -97,7 +95,8 @@ public slots:
     void wordListItemActivated( QListWidgetItem * );
     void wordListLookupItem( QListWidgetItem * item);
     void wordListSelectionChanged();
-    void dictLoadFinished(bool ok);
+    void dictLoadFinished();
+    void dictLoadUrl(const QUrl& url);
 
 };
 

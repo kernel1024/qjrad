@@ -5,8 +5,6 @@
 #include <QScrollBar>
 #include <QMenu>
 #include <QUrlQuery>
-#include <QWebEnginePage>
-#include <QWebEngineProfile>
 #include <goldendictlib/goldendictmgr.hh>
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
@@ -28,20 +26,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
     cgl->dbusDict->setMainWindow(this);
 
-    layout()->removeWidget(ui->wdictViewer);
-    ui->wdictViewer->setParent(NULL);
-    delete ui->wdictViewer;
-    ui->wdictViewer=NULL;
-
     forceFocusToEdit = false;
-
-    dictView = new QWebEngineView(this);
-    dictView->setObjectName(QString::fromUtf8("dictView"));
-    dictView->setUrl(QUrl("about://blank"));
-    ui->splitterDict->addWidget(dictView);
-
-    QWebEnginePage *wp = new QWebEnginePage(cgl->webProfile,this);
-    dictView->setPage(wp);
+    dictView = ui->wdictViewer;
 
     connect(cgl->dictManager,&CGoldenDictMgr::showStatusBarMessage,[this](const QString& msg){
         if (msg.isEmpty())
@@ -98,7 +84,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(cgl->wordFinder,&WordFinder::updated,this,&MainWindow::prefixMatchUpdated);
     connect(cgl->wordFinder,&WordFinder::finished,this,&MainWindow::prefixMatchFinished);
 
-    connect( dictView, &QWebEngineView::loadFinished,this,&MainWindow::dictLoadFinished);
+    connect(dictView, &QTextBrowser::textChanged,this,&MainWindow::dictLoadFinished);
+    connect(dictView, &QTextBrowser::anchorClicked,this,&MainWindow::dictLoadUrl);
 
     keyFilter = new CAuxDictKeyFilter(this);
     ui->scratchPad->installEventFilter(keyFilter);
@@ -644,12 +631,30 @@ void MainWindow::wordListSelectionChanged()
         wordListItemActivated( selected.front() );
 }
 
-void MainWindow::dictLoadFinished(bool)
+void MainWindow::dictLoadFinished()
 {
     dictView->unsetCursor();
 
     if (forceFocusToEdit)
         ui->scratchPad->setFocus();
+}
+
+void MainWindow::dictLoadUrl(const QUrl &url)
+{
+    QNetworkRequest rq(url);
+    QNetworkReply* rpl = cgl->netMan->get(rq);
+
+    connect(rpl,&QNetworkReply::finished,[this,rpl](){
+        QByteArray rplb;
+        if (rpl->error()==QNetworkReply::NoError)
+            rplb = rpl->readAll();
+        else
+            rplb = makeSimpleHtml(tr("Error"),
+                                  tr("Dictionary request failed for query '%1'.")
+                                  .arg(rpl->url().toString())).toUtf8();
+        dictView->setHtml(rplb);
+        rpl->deleteLater();
+    });
 }
 
 void MainWindow::prefixMatchUpdated()
@@ -781,7 +786,7 @@ void MainWindow::showTranslationFor( QString const & inWord )
     QUrlQuery requ;
     requ.addQueryItem( "word", inWord );
     req.setQuery(requ);
-    dictView->load( req );
+    dictLoadUrl(req);
 
     dictView->setCursor( Qt::WaitCursor );
 }
@@ -795,8 +800,7 @@ void MainWindow::showEmptyTranslationPage()
     QUrlQuery requ;
     requ.addQueryItem( "blank", "1" );
     req.setQuery(requ);
-
-    dictView->load( req );
+    dictLoadUrl(req);
 
     dictView->setCursor( Qt::WaitCursor );
 }

@@ -316,7 +316,14 @@ p, li { white-space: pre-wrap; }
            <enum>Qt::Vertical</enum>
           </property>
           <widget class="QListWidget" name="dictWords"/>
-          <widget class="QWidget" name="wdictViewer" native="true"/>
+          <widget class="QTextBrowser" name="wdictViewer">
+           <property name="openExternalLinks">
+            <bool>false</bool>
+           </property>
+           <property name="openLinks">
+            <bool>false</bool>
+           </property>
+          </widget>
          </widget>
         </item>
        </layout>

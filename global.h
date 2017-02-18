@@ -19,7 +19,6 @@ class ArticleNetworkAccessManager;
 class CGoldenDictMgr;
 class WordFinder;
 class QKDBusDict;
-class QWebEngineProfile;
 
 class CGlobal : public QObject
 {
@@ -32,7 +31,6 @@ public:
     CGoldenDictMgr * dictManager;
     WordFinder * wordFinder;
     QKDBusDict* dbusDict;
-    QWebEngineProfile* webProfile;
 
     QFont fontResults, fontBtn, fontLabels;
     int maxHButtons, maxKanaHButtons;

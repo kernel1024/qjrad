@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui xml webenginewidgets widgets network dbus
+QT       += core gui xml widgets network dbus
 
 TARGET = qjrad
 TEMPLATE = app
