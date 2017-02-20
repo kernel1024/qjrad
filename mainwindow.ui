@@ -332,7 +332,7 @@ p, li { white-space: pre-wrap; }
   <customwidget>
    <class>CGDTextBrowser</class>
    <extends>QTextBrowser</extends>
-   <header location="global">miscutils.h</header>
+   <header>miscutils.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>
