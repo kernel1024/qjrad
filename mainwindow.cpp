@@ -85,7 +85,6 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(cgl->wordFinder,&WordFinder::finished,this,&MainWindow::prefixMatchFinished);
 
     connect(dictView, &QTextBrowser::textChanged,this,&MainWindow::dictLoadFinished);
-    connect(dictView, &QTextBrowser::anchorClicked,this,&MainWindow::dictLoadUrl);
 
     keyFilter = new CAuxDictKeyFilter(this);
     ui->scratchPad->installEventFilter(keyFilter);
@@ -641,20 +640,7 @@ void MainWindow::dictLoadFinished()
 
 void MainWindow::dictLoadUrl(const QUrl &url)
 {
-    QNetworkRequest rq(url);
-    QNetworkReply* rpl = cgl->netMan->get(rq);
-
-    connect(rpl,&QNetworkReply::finished,[this,rpl](){
-        QByteArray rplb;
-        if (rpl->error()==QNetworkReply::NoError)
-            rplb = rpl->readAll();
-        else
-            rplb = makeSimpleHtml(tr("Error"),
-                                  tr("Dictionary request failed for query '%1'.")
-                                  .arg(rpl->url().toString())).toUtf8();
-        dictView->setHtml(rplb);
-        rpl->deleteLater();
-    });
+    dictView->setSource(url);
 }
 
 void MainWindow::prefixMatchUpdated()
