@@ -55,7 +55,7 @@ void QSettingsDlg::updateFonts()
 void QSettingsDlg::changeFont()
 {
     QPushButton *pb = qobject_cast<QPushButton *>(sender());
-    if (pb==NULL) return;
+    if (pb==nullptr) return;
     bool ok;
     QFont f = QApplication::font();
     if (pb==ui->btnFontButtons)

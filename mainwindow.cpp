@@ -19,7 +19,7 @@ MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
-    if (cgl==NULL)
+    if (cgl==nullptr)
         cgl = new CGlobal();
 
     ui->setupUi(this);
@@ -207,7 +207,7 @@ void MainWindow::renderRadicalsButtons()
     QWidget *w;
     for (int i=0;i<dict.radicalsLookup.count();i++) {
         QKRadItem ri = dict.radicalsLookup.at(i);
-        w = NULL;
+        w = nullptr;
         if (rmark!=ri.strokes) {
             // insert label
             QLabel *rl = new QLabel(tr("%1").arg(ri.strokes),ui->frameRad);
@@ -296,7 +296,7 @@ void MainWindow::renderKanaButtons()
 
 void MainWindow::insertOneWidget(QWidget *w, int &row, int &clmn, bool isKana)
 {
-    if (w!=NULL) {
+    if (w!=nullptr) {
         if (!isKana) {
             ui->gridRad->addWidget(w,row,clmn);
             buttons << w;
@@ -320,7 +320,7 @@ void MainWindow::resetRadicals()
     allowLookup = false;
     for (int i=0;i<buttons.count();i++) {
         QPushButton *pb = qobject_cast<QPushButton *>(buttons.at(i));
-        if (pb==NULL) continue;
+        if (pb==nullptr) continue;
         pb->setChecked(false);
         pb->setEnabled(true);
     }
@@ -341,7 +341,7 @@ void MainWindow::radicalPressed(const bool)
     QList<QPushButton *> pbl;
     pbl.clear();
     for (int i=0;i<buttons.count();i++)
-        if (qobject_cast<QPushButton *>(buttons.at(i))!=NULL)
+        if (qobject_cast<QPushButton *>(buttons.at(i))!=nullptr)
             pbl << qobject_cast<QPushButton *>(buttons.at(i));
 
     QStringList kl;
@@ -432,7 +432,7 @@ void MainWindow::radicalPressed(const bool)
 void MainWindow::kanaPressed(const bool)
 {
     QPushButton *btn = qobject_cast<QPushButton *>(sender());
-    if (btn==NULL) return;
+    if (btn==nullptr) return;
 
     QString k = btn->text();
     ui->scratchPad->setEditText(ui->scratchPad->currentText()+k);
@@ -505,7 +505,7 @@ void MainWindow::regionGrabbed(const QPixmap &pic)
 
     if ( !pic.isNull() )
     {
-        if (ocr!=NULL && pic.width()>20 && pic.height()>20) {
+        if (ocr!=nullptr && pic.width()>20 && pic.height()>20) {
             QImage cpx = pic.toImage();
             ocr->SetImage(Image2PIX(cpx));
             char* rtext = ocr->GetUTF8Text();
@@ -579,14 +579,14 @@ void MainWindow::settingsDlg()
         cgl->wordFinder->clear();
         cgl->loadDictionaries();
     }
-    dlg->setParent(NULL);
+    dlg->setParent(nullptr);
     delete dlg;
 }
 
 void MainWindow::opacityList()
 {
     QAction* ac = qobject_cast<QAction* >(sender());
-    if (ac!=NULL) {
+    if (ac!=nullptr) {
         int op = ac->data().toInt();
         if (op>0 && op<=100)
             setWindowOpacity((qreal)op/100.0);
@@ -595,7 +595,7 @@ void MainWindow::opacityList()
 
     QMenu* m = new QMenu();
     for (int i=0;i<=10;i++) {
-        QAction* ac = new QAction(QString("%1%").arg(50+i*5),NULL);
+        QAction* ac = new QAction(QString("%1%").arg(50+i*5),nullptr);
         connect(ac,&QAction::triggered,this,&MainWindow::opacityList);
         ac->setData(50+i*5);
         m->addAction(ac);
@@ -801,7 +801,7 @@ bool CAuxDictKeyFilter::eventFilter(QObject *obj, QEvent *event)
 {
     if (event->type()==QEvent::KeyPress) {
         QKeyEvent *ev = static_cast<QKeyEvent *>(event);
-        if (ev!=NULL)
+        if (ev!=nullptr)
             emit keyPressed(ev->key());
     }
     return QObject::eventFilter(obj,event);

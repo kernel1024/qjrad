@@ -70,13 +70,13 @@ bool QKDictionary::loadDictionaries()
     return loadKanjiDict();
 }
 
-QKDictionary *kdict = NULL;
+QKDictionary *kdict = nullptr;
 QMutex kdictmutex;
 
 // Kanji sorting magic
 bool kanjiLessThan(const QChar &c1, const QChar &c2)
 {
-    if (kdict==NULL) return (c1<c2); // in case if kdict is not present - simply compare unicode characters
+    if (kdict==nullptr) return (c1<c2); // in case if kdict is not present - simply compare unicode characters
     if (!kdict->kanjiStrokes.contains(c1) || !kdict->kanjiStrokes.contains(c2)) return (c1<c2); // also here
     // in-depth compare with kdict info
     if (kdict->kanjiStrokes[c1]!=kdict->kanjiStrokes[c2]) // if strokes count differs...

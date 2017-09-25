@@ -8,7 +8,7 @@
 #include "mainwindow.h"
 
 QKDBusDict::QKDBusDict(QObject *parent, ArticleNetworkAccessManager *netManager) :
-    QObject(parent), m_wnd(NULL)
+    QObject(parent), m_wnd(nullptr)
 {
     netMan = netManager;
 }
@@ -22,7 +22,7 @@ void QKDBusDict::dataReady()
 {
     QString res = QString();
     QNetworkReply* rep = qobject_cast<QNetworkReply *>(sender());
-    if (rep!=NULL) {
+    if (rep!=nullptr) {
         res = QString::fromUtf8(rep->readAll());
         rep->deleteLater();
     }

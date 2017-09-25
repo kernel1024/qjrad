@@ -10,7 +10,7 @@
 #include "dbusdict.h"
 #include "dictionary_adaptor.h"
 
-CGlobal* cgl = NULL;
+CGlobal* cgl = nullptr;
 
 CGlobal::CGlobal(QObject *parent) :
     QObject(parent),
@@ -145,7 +145,7 @@ PIX* Image2PIX(QImage& qImage) {
 
   pixs = pixCreate(width, height, depth);
   pixSetWpl(pixs, wpl);
-  pixSetColormap(pixs, NULL);
+  pixSetColormap(pixs, nullptr);
   l_uint32 *datas = pixs->data;
 
   for (int y = 0; y < height; y++) {
@@ -205,11 +205,11 @@ QImage PIX2QImage(PIX *pixImage) {
 tesseract::TessBaseAPI* initializeOCR()
 {
     ocr = new tesseract::TessBaseAPI();
-    if (ocr->Init(NULL,"jpn")) {
-        QMessageBox::critical(NULL,"QManga error",
+    if (ocr->Init(nullptr,"jpn")) {
+        QMessageBox::critical(nullptr,"QManga error",
                               "Could not initialize Tesseract.\n"
                               "Maybe japanese language training data is not installed.");
-        return NULL;
+        return nullptr;
     }
     return ocr;
 }
