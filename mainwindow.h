@@ -61,6 +61,9 @@ private:
     CAuxDictKeyFilter *keyFilter;
     QRect lastGrabbedRegion;
 
+    QString lastWordFinderReq;
+    bool fuzzySearch;
+
     void insertOneWidget(QWidget *w, int &row, int &clmn, bool isKana);
     void closeEvent(QCloseEvent * event);
 
@@ -69,6 +72,7 @@ private:
     void updateMatchResults( bool finished );
 
     void restoreWindow();
+    void startWordSearch(const QString &newValue, bool fuzzy);
 public slots:
     // window geometry and misc
     void centerWindow();

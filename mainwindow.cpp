@@ -106,6 +106,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
     centerWindow();
 
+    lastWordFinderReq.clear();
+    fuzzySearch = false;
     cgl->wordFinder->clear();
     cgl->loadDictionaries();
 
@@ -336,7 +338,12 @@ void MainWindow::updateKana(const bool)
 
 void MainWindow::radicalPressed(const bool)
 {
-    if (!allowLookup) return;
+    if (!allowLookup) {
+        if (!lastWordFinderReq.isEmpty())
+            startWordSearch(lastWordFinderReq, false);
+
+        return;
+    }
 
     QList<QPushButton *> pbl;
     pbl.clear();
@@ -427,6 +434,9 @@ void MainWindow::radicalPressed(const bool)
         statusMsg->setText(tr("Ready"));
 
     ui->listKanji->verticalScrollBar()->setSingleStep(ui->listKanji->verticalScrollBar()->pageStep());
+
+    if (!lastWordFinderReq.isEmpty())
+        startWordSearch(lastWordFinderReq, !foundKanji.isEmpty());
 }
 
 void MainWindow::kanaPressed(const bool)
@@ -576,6 +586,8 @@ void MainWindow::settingsDlg()
         ui->scratchPad->setFont(cgl->fontResults);
         ui->dictWords->setFont(cgl->fontBtn);
         cgl->setDictPaths(dlg->getDictPaths());
+        lastWordFinderReq.clear();
+        fuzzySearch = false;
         cgl->wordFinder->clear();
         cgl->loadDictionaries();
     }
@@ -655,7 +667,23 @@ void MainWindow::prefixMatchFinished()
 
 void MainWindow::updateMatchResults(bool finished)
 {
-    WordFinder::SearchResults const & results = cgl->wordFinder->getResults();
+    WordFinder::SearchResults const & rawResults = cgl->wordFinder->getResults();
+    WordFinder::SearchResults results;
+
+    QString subKanji = foundKanji;
+    subKanji.remove(QRegExp("[\\x2460-\\x24FF]")); // remove enclosed numeric marks
+
+    if (fuzzySearch && !subKanji.isEmpty()) { // radicals is pressed, new kanji search in progress
+        QRegExp pattern(QString("%1[%2]").arg(lastWordFinderReq,subKanji));
+
+        for ( unsigned x = 0; x < rawResults.size(); ++x ) {
+            if (rawResults[x].first==lastWordFinderReq ||       // requested word itself or
+                    rawResults[x].first.indexOf(pattern)==0) {  // started with requested word and selected kanji
+                results.push_back(rawResults[x]);
+            }
+        }
+    } else
+        results = rawResults;
 
     ui->dictWords->setUpdatesEnabled( false );
 
@@ -726,6 +754,11 @@ void MainWindow::translateInputChanged( QString const & newValue )
     if ((ui->scratchPad->findText(newValue)<0) && !newValue.isEmpty())
         ui->scratchPad->addItem(ui->scratchPad->currentText());
 
+    startWordSearch(newValue, false);
+}
+
+void MainWindow::startWordSearch( QString const & newValue, bool fuzzy )
+{
     showEmptyTranslationPage();
 
     // If there's some status bar message present, clear it since it may be
@@ -744,6 +777,8 @@ void MainWindow::translateInputChanged( QString const & newValue )
     if ( !req.size() )
     {
         // An empty request always results in an empty result
+        lastWordFinderReq.clear();
+        fuzzySearch = false;
         cgl->wordFinder->cancel();
         ui->dictWords->clear();
         ui->dictWords->unsetCursor();
@@ -753,6 +788,8 @@ void MainWindow::translateInputChanged( QString const & newValue )
 
     ui->dictWords->setCursor( Qt::WaitCursor );
 
+    lastWordFinderReq = req;
+    fuzzySearch = fuzzy;
     cgl->wordFinder->prefixMatch( req, cgl->dictManager->dictionaries );
 }
 
