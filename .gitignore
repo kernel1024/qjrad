@@ -28,11 +28,21 @@ Release/
 *.pro.user*
 *~
 
+# CMake specific
+CMakeCache.txt
+CMakeLists.txt.user
+CMakeFiles
+CMakeScripts
+Makefile
+cmake_install.cmake
+*_autogen
+*.depends
+
 # Project specific
 qjrad
+qjrad.cbp
 qjrad_*.pro
 dictionary_adaptor.*
 kanjidic.rcc
-kanjiconv/kanjicnv
-kanjiconv/out
-goldendict
+kanjiconv
+converter/out
