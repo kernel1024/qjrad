@@ -10,6 +10,10 @@ tesseract::TessBaseAPI* ocr = nullptr;
 int main(int argc, char *argv[])
 {
     setlocale (LC_NUMERIC, "C");
+#ifdef JTESS_API4
+    setlocale (LC_ALL, "C");
+    setlocale (LC_CTYPE, "C");
+#endif
 #ifdef WITH_OCR
     ocr = initializeOCR();
 #endif
