@@ -37,7 +37,7 @@ public:
     QKDBusDict* dbusDict;
 
     QFont fontResults, fontBtn, fontLabels;
-    int maxHButtons, maxKanaHButtons;
+    int maxHButtons, maxKanaHButtons, maxDictionaryResults;
     // geometry restore
     bool geomFirstWinPos;
     QPoint savedWinPos;

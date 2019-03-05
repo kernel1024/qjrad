@@ -570,14 +570,16 @@ void MainWindow::closeEvent(QCloseEvent * event)
 
 void MainWindow::settingsDlg()
 {
-    QSettingsDlg *dlg = new QSettingsDlg(this,cgl->fontBtn,cgl->fontLabels,cgl->fontResults,cgl->maxHButtons,
-                                         cgl->maxKanaHButtons, cgl->getDictPaths());
+    QSettingsDlg *dlg = new QSettingsDlg(this,cgl->fontBtn,cgl->fontLabels,cgl->fontResults,
+                                         cgl->maxHButtons, cgl->maxKanaHButtons, cgl->maxDictionaryResults,
+                                         cgl->getDictPaths());
     if (dlg->exec()) {
         cgl->fontBtn = dlg->fontBtn;
         cgl->fontLabels = dlg->fontLabels;
         cgl->fontResults = dlg->fontResults;
         cgl->maxHButtons = dlg->maxHButtons;
         cgl->maxKanaHButtons = dlg->maxKanaHButtons;
+        cgl->maxDictionaryResults = dlg->maxDictionaryResults;
         allowLookup = false;
         renderRadicalsButtons();
         renderKanaButtons();
@@ -747,6 +749,8 @@ void MainWindow::updateMatchResults(bool finished)
         if ( !cgl->wordFinder->getErrorString().isEmpty() )
             statusBar()->showMessage( tr( "WARNING: %1" ).arg(cgl->wordFinder->getErrorString() ) );
     }
+
+    updateResultsCountLabel();
 }
 
 void MainWindow::translateInputChanged( QString const & newValue )
@@ -782,6 +786,7 @@ void MainWindow::startWordSearch( QString const & newValue, bool fuzzy )
         cgl->wordFinder->cancel();
         ui->dictWords->clear();
         ui->dictWords->unsetCursor();
+        updateResultsCountLabel();
 
         return;
     }
@@ -790,7 +795,16 @@ void MainWindow::startWordSearch( QString const & newValue, bool fuzzy )
 
     lastWordFinderReq = req;
     fuzzySearch = fuzzy;
-    cgl->wordFinder->prefixMatch( req, cgl->dictManager->dictionaries );
+    cgl->wordFinder->prefixMatch( req, cgl->dictManager->dictionaries,
+                                  static_cast<unsigned long>(cgl->maxDictionaryResults) );
+}
+
+void MainWindow::updateResultsCountLabel()
+{
+    if (ui->dictWords->count()>0)
+        ui->dictBox->setTitle(tr("Dictionary (%1 results)").arg(ui->dictWords->count()));
+    else
+        ui->dictBox->setTitle(tr("Dictionary"));
 }
 
 void MainWindow::translateInputFinished()

@@ -73,6 +73,7 @@ private:
 
     void restoreWindow();
     void startWordSearch(const QString &newValue, bool fuzzy);
+    void updateResultsCountLabel();
 public slots:
     // window geometry and misc
     void centerWindow();

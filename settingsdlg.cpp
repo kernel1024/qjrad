@@ -5,7 +5,8 @@
 #include <QListWidgetItem>
 
 QSettingsDlg::QSettingsDlg(QWidget *parent, const QFont &fBtn, const QFont &fLabels, const QFont &fResults,
-                           int aMaxHButtons, int aMaxKanaHButtons, const QStringList &dictPaths) :
+                           int aMaxHButtons, int aMaxKanaHButtons, int aMaxDictionaryResults,
+                           const QStringList &dictPaths) :
     QDialog(parent),
     ui(new Ui::QSettingsDlg)
 {
@@ -15,13 +16,16 @@ QSettingsDlg::QSettingsDlg(QWidget *parent, const QFont &fBtn, const QFont &fLab
     fontResults = fResults;
     maxHButtons = aMaxHButtons;
     maxKanaHButtons = aMaxKanaHButtons;
+    maxDictionaryResults = aMaxDictionaryResults;
     ui->buttonsCnt->setValue(maxHButtons);
     ui->buttonsCntKana->setValue(maxKanaHButtons);
+    ui->resultMax->setValue(maxDictionaryResults);
     connect(ui->btnFontButtons,SIGNAL(clicked()),this,SLOT(changeFont()));
     connect(ui->btnFontLabels,SIGNAL(clicked()),this,SLOT(changeFont()));
     connect(ui->btnFontResults,SIGNAL(clicked()),this,SLOT(changeFont()));
     connect(ui->buttonsCnt,SIGNAL(valueChanged(int)),this,SLOT(cntChanged(int)));
     connect(ui->buttonsCntKana,SIGNAL(valueChanged(int)),this,SLOT(cntChangedKana(int)));
+    connect(ui->resultMax,SIGNAL(valueChanged(int)),this,SLOT(cntChangedMaxResults(int)));
     connect(ui->btnAddPath,SIGNAL(clicked()),this,SLOT(addDir()));
     connect(ui->btnDelPath,SIGNAL(clicked()),this,SLOT(delDir()));
 
@@ -83,6 +87,11 @@ void QSettingsDlg::cntChanged(int i)
 void QSettingsDlg::cntChangedKana(int i)
 {
     maxKanaHButtons = i;
+}
+
+void QSettingsDlg::cntChangedMaxResults(int i)
+{
+    maxDictionaryResults = i;
 }
 
 void QSettingsDlg::addDir()

@@ -71,6 +71,7 @@ void CGlobal::readSettings()
     fontLabels = qvariant_cast<QFont>(se.value("fontLabel",fontBtnLabelL));
     maxHButtons = se.value("maxHButtons",30).toInt();
     maxKanaHButtons = se.value("maxKanaHButtons",15).toInt();
+    maxDictionaryResults = se.value("maxDictionaryResults",10000).toInt();
     se.endGroup();
     se.beginGroup("Geometry");
     savedWinPos = se.value("winPos",QPoint(20,20)).toPoint();
@@ -97,6 +98,7 @@ void CGlobal::writeSettings(MainWindow * wnd)
     se.setValue("fontLabel",fontLabels);
     se.setValue("maxHButtons",maxHButtons);
     se.setValue("maxKanaHButtons",maxKanaHButtons);
+    se.setValue("maxDictionaryResults",maxDictionaryResults);
     se.endGroup();
     se.beginGroup("Geometry");
     se.setValue("winPos",wnd->pos());

@@ -293,7 +293,7 @@ p, li { white-space: pre-wrap; }
         </item>
        </layout>
       </widget>
-      <widget class="QGroupBox" name="groupBox">
+      <widget class="QGroupBox" name="dictBox">
        <property name="title">
         <string>Dictionary</string>
        </property>
