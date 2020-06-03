@@ -9,13 +9,21 @@ set(KANJICONV kanjiconv)
 find_package(ECM REQUIRED NO_MODULE)
 set(CMAKE_MODULE_PATH ${ECM_MODULE_PATH})
 
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(QT_MIN_VERSION 5.6)
+set(QT_MIN_VERSION 5.14)
 
+add_definitions(
+    -DQT_DEPRECATED_WARNINGS
+    -DQT_DISABLE_DEPRECATED_BEFORE=0x050E00
+)
+
+find_package(Threads REQUIRED)
 find_package(Qt5 ${QT_MIN_VERSION} CONFIG REQUIRED COMPONENTS
     Core
     Gui
@@ -24,6 +32,8 @@ find_package(Qt5 ${QT_MIN_VERSION} CONFIG REQUIRED COMPONENTS
     Network
     DBus
 )
+
+add_subdirectory(zdict)
 
 ####### Optional Tesseract linking #####################
 
@@ -75,8 +85,7 @@ qt5_add_resources(RESOURCES qjrad.qrc)
 qt5_add_dbus_adaptor(DBUS_ADAPTORS org.qjrad.dictionary.xml dbusdict.h QKDBusDict dictionary_adaptor)
 
 set(LIBS
-    -lz
-    -lgoldendict
+    -lz -ltbb
 )
 
 ######## Kanjiconv subproject sources ##############################
@@ -106,6 +115,8 @@ target_link_libraries(${QJRAD}
     Qt5::DBus
     ${LIBS}
     ${TESS_LIBS}
+    Threads::Threads
+    zdict
 )
 
 ####### Kanjiconv executable ##########################

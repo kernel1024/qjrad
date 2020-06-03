@@ -37,6 +37,9 @@ Makefile
 cmake_install.cmake
 *_autogen
 *.depends
+.cmake
+CMakeLists.txt.user.*
+qtcsettings*
 
 # Project specific
 qjrad
@@ -46,3 +49,4 @@ dictionary_adaptor.*
 kanjidic.rcc
 kanjiconv
 converter/out
+zdict

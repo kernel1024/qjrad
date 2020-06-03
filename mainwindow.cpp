@@ -5,7 +5,9 @@
 #include <QScrollBar>
 #include <QMenu>
 #include <QUrlQuery>
-#include <goldendictlib/goldendictmgr.hh>
+#include <QTimer>
+#include <QWindow>
+#include <QScreen>
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "kanjimodel.h"
@@ -14,6 +16,16 @@
 #include "global.h"
 #include "dbusdict.h"
 #include "regiongrabber.h"
+#include "zdict/zdictcontroller.h"
+
+namespace CDefaults {
+const int btnWidthMultiplier = 13;
+const int btnWidthDivider = 10;
+const int screenCaptureDelay = 200;
+const int splittersEnforcingDelay = 1000;
+const int statusBarMessageMinWidth = 150;
+const int radicalsColorBiasMultiplier = 25;
+}
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -29,17 +41,6 @@ MainWindow::MainWindow(QWidget *parent) :
     forceFocusToEdit = false;
     dictView = ui->wdictViewer;
 
-    connect(cgl->dictManager,&CGoldenDictMgr::showStatusBarMessage,[this](const QString& msg){
-        if (msg.isEmpty())
-            statusBar()->clearMessage();
-        else
-            statusBar()->showMessage(msg);
-    });
-
-    connect(cgl->dictManager,&CGoldenDictMgr::showCriticalMessage,[this](const QString& msg){
-        QMessageBox::critical(this,tr("QJRad - error"),msg);
-    });
-
     infoKanjiTemplate = ui->infoKanji->toHtml();
     ui->infoKanji->clear();
 
@@ -49,17 +50,15 @@ MainWindow::MainWindow(QWidget *parent) :
     }
 
     QIcon appicon;
-    appicon.addFile(":/data/appicon22.png",QSize(22,22));
-    appicon.addFile(":/data/appicon32.png",QSize(32,32));
-    appicon.addFile(":/data/appicon48.png",QSize(48,48));
-    appicon.addFile(":/data/appicon64.png",QSize(64,64));
-    appicon.addFile(":/data/appicon128.png",QSize(128,128));
+    const QVector<int> iconSizes({22,32,48,64,128});
+    for (const auto sz : iconSizes)
+        appicon.addFile(QSL(":/data/appicon%1.png").arg(sz),QSize(sz,sz));
     setWindowIcon(appicon);
 
     foundKanji.clear();
 
     statusMsg = new QLabel(tr("Ready"));
-    statusMsg->setMinimumWidth(150);
+    statusMsg->setMinimumWidth(CDefaults::statusBarMessageMinWidth);
     statusMsg->setAlignment(Qt::AlignCenter);
     statusBar()->addPermanentWidget(statusMsg);
 
@@ -71,24 +70,30 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->clearScratch,&QPushButton::clicked,ui->scratchPad,&QComboBox::clearEditText);
     connect(ui->btnCapture,&QPushButton::clicked,this,&MainWindow::screenCapture);
 
-    connect(ui->btnBackspace,&QPushButton::clicked,[this](bool){
-        if (!ui->scratchPad->currentText().isEmpty())
+    connect(ui->btnBackspace,&QPushButton::clicked,[this](){
+        if (!ui->scratchPad->currentText().isEmpty()) {
             ui->scratchPad->setEditText(ui->scratchPad->currentText().left(
                                             ui->scratchPad->currentText().length()-1));
+        }
     });
 
     connect(ui->scratchPad,&QComboBox::editTextChanged,this,&MainWindow::translateInputChanged);
     connect(ui->scratchPad->lineEdit(),&QLineEdit::returnPressed,this,&MainWindow::translateInputFinished);
     connect(ui->dictWords,&QListWidget::itemSelectionChanged,this,&MainWindow::wordListSelectionChanged);
     connect(ui->dictWords,&QListWidget::itemDoubleClicked,this,&MainWindow::wordListLookupItem);
-    connect(cgl->wordFinder,&WordFinder::updated,this,&MainWindow::prefixMatchUpdated);
-    connect(cgl->wordFinder,&WordFinder::finished,this,&MainWindow::prefixMatchFinished);
+
+    connect(cgl->dictManager,&ZDict::ZDictController::wordListComplete,
+            this,&MainWindow::updateMatchResults,Qt::QueuedConnection);
+    connect(cgl->dictManager,&ZDict::ZDictController::articleComplete,
+            this,&MainWindow::articleReady,Qt::QueuedConnection);
+    connect(this,&MainWindow::stopDictionaryWork,cgl->dictManager,&ZDict::ZDictController::cancelActiveWork);
 
     connect(dictView, &QTextBrowser::textChanged,this,&MainWindow::dictLoadFinished);
 
     keyFilter = new CAuxDictKeyFilter(this);
     ui->scratchPad->installEventFilter(keyFilter);
-    connect(keyFilter, &CAuxDictKeyFilter::keyPressed, [this](int){
+    connect(keyFilter, &CAuxDictKeyFilter::keyPressed, [this](int key){
+        Q_UNUSED(key)
         forceFocusToEdit = true;
     });
 
@@ -106,14 +111,12 @@ MainWindow::MainWindow(QWidget *parent) :
 
     centerWindow();
 
+    dictView->clear();
     lastWordFinderReq.clear();
     fuzzySearch = false;
-    cgl->wordFinder->clear();
     cgl->loadDictionaries();
 
-    showEmptyTranslationPage();
-
-    QTimer::singleShot(1000,this,&MainWindow::updateSplitters);
+    QTimer::singleShot(CDefaults::splittersEnforcingDelay,this,&MainWindow::updateSplitters);
 #ifndef WITH_OCR
     ui->btnCapture->setEnabled(false);
     ui->btnCapture->hide();
@@ -133,17 +136,18 @@ void MainWindow::centerWindow()
         cgl->geomFirstWinPos = false;
         return;
     }
-    int screen = 0;
-    QWidget *w = window();
-    QDesktopWidget *desktop = QApplication::desktop();
-    if (w) {
-        screen = desktop->screenNumber(w);
-    } else if (desktop->isVirtualDesktop()) {
-        screen = desktop->screenNumber(QCursor::pos());
-    } else {
-        screen = desktop->screenNumber(this);
+
+    QScreen *screen = nullptr;
+
+    if (window() && window()->windowHandle()) {
+        screen = window()->windowHandle()->screen();
+    } else if (!QApplication::screens().isEmpty()) {
+        screen = QApplication::screenAt(QCursor::pos());
     }
-    QRect rect(desktop->availableGeometry(screen));
+    if (screen == nullptr)
+        screen = QApplication::primaryScreen();
+
+    QRect rect(screen->availableGeometry());
     move(rect.width()/2 - frameGeometry().width()/2,
          rect.height()/2 - frameGeometry().height()/2);
 }
@@ -152,18 +156,15 @@ void MainWindow::updateSplitters()
 {
     ui->splitter->setCollapsible(0,true);
 
-    QList<int> widths;
+    QList<int> widths({ width() - cgl->savedDictSplitterPos,
+                        cgl->savedDictSplitterPos });
 
     ui->splitterMain->setCollapsible(1,true);
-    widths.clear();
-    widths << width() - cgl->savedDictSplitterPos;
-    widths << cgl->savedDictSplitterPos;
     ui->splitterMain->setSizes(widths);
 
-    widths.clear();
-    widths << 2*height()/5;
-    widths << 3*height()/5;
-    ui->splitterDict->setSizes(widths);
+    QList<int> dictWidths({ 2*height()/5,
+                            3*height()/5 });
+    ui->splitterDict->setSizes(dictWidths);
 }
 
 void MainWindow::clearRadButtons()
@@ -188,12 +189,12 @@ QList<int> MainWindow::getDictSplittersSize()
     return ui->splitterMain->sizes();
 }
 
-int MainWindow::getKanjiGrade(const QChar &kanji)
+int MainWindow::getKanjiGrade(QChar kanji) const
 {
     if (dict.kanjiGrade.contains(kanji))
         return dict.kanjiGrade.value(kanji);
-    else
-        return 0;
+
+    return 0;
 }
 
 void MainWindow::renderRadicalsButtons()
@@ -204,15 +205,17 @@ void MainWindow::renderRadicalsButtons()
 
     ui->gridRad->setHorizontalSpacing(2);
     ui->gridRad->setVerticalSpacing(2);
-    int rmark=0, row=0, clmn=0;
+    int rmark=0;
+    int row=0;
+    int clmn=0;
 
-    QWidget *w;
+    QWidget *w = nullptr;
     for (int i=0;i<dict.radicalsLookup.count();i++) {
         QKRadItem ri = dict.radicalsLookup.at(i);
         w = nullptr;
         if (rmark!=ri.strokes) {
             // insert label
-            QLabel *rl = new QLabel(tr("%1").arg(ri.strokes),ui->frameRad);
+            auto *rl = new QLabel(tr("%1").arg(ri.strokes),ui->frameRad);
             rl->setAlignment(Qt::AlignCenter);
             rl->setFont(cgl->fontLabels);
             rl->setFrameShape(QFrame::Box);
@@ -221,7 +224,7 @@ void MainWindow::renderRadicalsButtons()
             insertOneWidget(w,row,clmn,false);
         }
         // insert button
-        QPushButton *pb = new QPushButton(ri.radical,ui->frameRad);
+        auto *pb = new QPushButton(ri.radical,ui->frameRad);
         pb->setFlat(true);
         pb->setFont(cgl->fontBtn);
         pb->setCheckable(true);
@@ -229,12 +232,14 @@ void MainWindow::renderRadicalsButtons()
         QPalette p = pb->palette();
         p.setBrush(QPalette::Disabled,QPalette::ButtonText,QBrush(
                        middleColor(QApplication::palette("QPushButton").color(QPalette::Button),
-                                   QApplication::palette("QPushButton").color(QPalette::ButtonText),25)));
+                                   QApplication::palette("QPushButton").color(QPalette::ButtonText),
+                                   CDefaults::radicalsColorBiasMultiplier)));
         pb->setPalette(p);
         // ----
         if (btnWidth<0) {
             QFontMetrics fm(pb->font());
-            btnWidth = 13*fm.width(QChar(0x9fa0))/10;
+            btnWidth = CDefaults::btnWidthMultiplier * fm.horizontalAdvance(CDefaults::biggestRadical)
+                       / CDefaults::btnWidthDivider;
         }
         pb->setMinimumWidth(btnWidth);
         pb->setMinimumHeight(btnWidth);
@@ -247,7 +252,7 @@ void MainWindow::renderRadicalsButtons()
 
 void MainWindow::renderKanaButtons()
 {
-    QList<int> kana = {
+    static const QList<int> kana = {
         0x3042, 0x3044, 0x3046, 0x3048, 0x304A,
         0x3041, 0x3043, 0x3045, 0x3047, 0x3049,
         0x304b, 0x304d, 0x304f, 0x3051, 0x3053,
@@ -266,26 +271,30 @@ void MainWindow::renderKanaButtons()
         0x3084, 0x3086, 0x3088, 0x3094, 0x3095,
         0x3083, 0x3085, 0x3087, 0x3063, 0x3096
     };
+    const int katakanaOffset = 0x30A0-0x3040;
+
     int btnWidth = -1;
 
     clearKanaButtons();
 
     ui->gridKana->setHorizontalSpacing(2);
     ui->gridKana->setVerticalSpacing(2);
-    int row=0, clmn=0;
+    int row=0;
+    int clmn=0;
 
-    QWidget *w;
-    foreach (const int i, kana) {
+    QWidget *w = nullptr;
+    for(const auto &i : kana) {
         // insert button
-        QChar k = QChar(i);
+        QChar k(i);
         if (ui->radioKatakana->isChecked())
-            k = QChar(i+(0x30A0-0x3040));
-        QPushButton *pb = new QPushButton(k,ui->frameKana);
+            k = QChar(i+katakanaOffset);
+        auto *pb = new QPushButton(k,ui->frameKana);
         pb->setFlat(true);
         pb->setFont(cgl->fontBtn);
         if (btnWidth<0) {
             QFontMetrics fm(pb->font());
-            btnWidth = 13*fm.width(QChar(0x9fa0))/10;
+            btnWidth = CDefaults::btnWidthMultiplier * fm.horizontalAdvance(CDefaults::biggestRadical)
+                       / CDefaults::btnWidthDivider;
         }
         pb->setMinimumWidth(btnWidth);
         pb->setMinimumHeight(btnWidth);
@@ -321,7 +330,7 @@ void MainWindow::resetRadicals()
 {
     allowLookup = false;
     for (int i=0;i<buttons.count();i++) {
-        QPushButton *pb = qobject_cast<QPushButton *>(buttons.at(i));
+        auto *pb = qobject_cast<QPushButton *>(buttons.at(i));
         if (pb==nullptr) continue;
         pb->setChecked(false);
         pb->setEnabled(true);
@@ -331,13 +340,15 @@ void MainWindow::resetRadicals()
     statusMsg->setText(tr("Ready"));
 }
 
-void MainWindow::updateKana(const bool)
+void MainWindow::updateKana(bool checked)
 {
+    Q_UNUSED(checked)
     renderKanaButtons();
 }
 
-void MainWindow::radicalPressed(const bool)
+void MainWindow::radicalPressed(bool checked)
 {
+    Q_UNUSED(checked)
     if (!allowLookup) {
         if (!lastWordFinderReq.isEmpty())
             startWordSearch(lastWordFinderReq, false);
@@ -345,17 +356,21 @@ void MainWindow::radicalPressed(const bool)
         return;
     }
 
-    QList<QPushButton *> pbl;
-    pbl.clear();
-    for (int i=0;i<buttons.count();i++)
-        if (qobject_cast<QPushButton *>(buttons.at(i))!=nullptr)
-            pbl << qobject_cast<QPushButton *>(buttons.at(i));
+    QList<QPushButton *> buttonList;
+    buttonList.reserve(buttons.count());
+    for (int i=0;i<buttons.count();i++) {
+        auto *btn = qobject_cast<QPushButton *>(buttons.at(i));
+        if (btn!=nullptr)
+            buttonList.append(btn);
+    }
 
-    QStringList kl;
-    kl.clear();
+    QStringList kanjiList;
+    kanjiList.reserve(buttonList.count());
+
+    // get kanji for each selected radical
     int bpcnt = 0;
-    for (int i=0;i<pbl.count();i++) {
-        QPushButton *pb = pbl.at(i);
+    for (int i=0;i<buttonList.count();i++) {
+        QPushButton *pb = buttonList.at(i);
         QChar r = pb->text().at(0);
         pb->setEnabled(true);
         if (pb->isChecked()) {
@@ -363,56 +378,57 @@ void MainWindow::radicalPressed(const bool)
             if (!r.isNull()) {
                 int idx = dict.radicalsLookup.indexOf(QKRadItem(r));
                 if (idx>=0) {
-                    kl << dict.radicalsLookup.at(idx).kanji;
+                    kanjiList.append(dict.radicalsLookup.at(idx).kanji);
                 }
             }
         }
-    }
-    while (kl.count()>1) {
-        QString fs = kl.at(0);
-        QString ms = kl.takeLast();
-        int i=0;
-        while (i<fs.length()) {
-            if (!ms.contains(fs.at(i)))
-                fs = fs.remove(i,1);
-            else
-                i++;
-        }
-        if (fs.isEmpty()) {
-            kl.clear();
-            kl << QString();
-            break;
-        }
-        kl.replace(0,fs);
     }
 
-    if (!kl.isEmpty()) {
+    // leave only kanji present for all selected radicals
+    while (kanjiList.count()>1) {
+        QString fs = kanjiList.at(0);
+        QString ms = kanjiList.takeLast();
+        int i=0;
+        while (i<fs.length()) {
+            if (!ms.contains(fs.at(i))) {
+                fs = fs.remove(i,1);
+            } else {
+                i++;
+            }
+        }
+        if (fs.isEmpty()) {
+            kanjiList.clear();
+            kanjiList << QString();
+            break;
+        }
+        kanjiList.replace(0,fs);
+    }
+
+    if (!kanjiList.isEmpty()) {
         // sort kanji by radicals weight and by unicode weight
-        foundKanji = dict.sortKanji(kl.takeFirst());
+        foundKanji = dict.sortKanji(kanjiList.takeFirst());
         // disable radicals that not appears on found set entirely
-        QList<QChar> ards;
-        ards.clear();
-        for (int i=0;i<foundKanji.length();i++) {
-            QChar kj = foundKanji.at(i);
+        QList<QChar> availableRadicals;
+        for (const auto &kj : qAsConst(foundKanji)) {
             if (dict.kanjiParts.contains(kj)) {
-                QString krad = dict.kanjiParts[kj].join("");
-                for (int j=0;j<krad.length();j++) {
-                    if (!ards.contains(krad.at(j)))
-                        ards << krad.at(j);
+                const QString krad = dict.kanjiParts.value(kj).join(QString());
+                for (const auto &rad : qAsConst(krad)) {
+                    if (!availableRadicals.contains(rad))
+                        availableRadicals.append(rad);
                 }
             }
         }
-        for (int i=0;i<pbl.count();i++) {
-            if (!ards.contains(pbl.at(i)->text().at(0)))
-                pbl.at(i)->setEnabled(false);
+        for (int i=0;i<buttonList.count();i++) {
+            if (!availableRadicals.contains(buttonList.at(i)->text().at(0)))
+                buttonList.at(i)->setEnabled(false);
         }
         // insert unselectable labels between kanji groups with different stroke count
         int idx = 0;
         int prevsc = 0;
         while (idx<foundKanji.length()) {
-            if (prevsc!=dict.kanjiStrokes[foundKanji.at(idx)]) {
-                prevsc = dict.kanjiStrokes[foundKanji.at(idx)];
-                foundKanji.insert(idx,QChar(0x2460+prevsc)); // use enclosed numerics set from unicode
+            if (prevsc!=dict.kanjiStrokes.value(foundKanji.at(idx))) {
+                prevsc = dict.kanjiStrokes.value(foundKanji.at(idx));
+                foundKanji.insert(idx,QChar(CDefaults::enclosedNumericsStart+prevsc)); // use enclosed numerics set from unicode
                 idx++;
             }
             idx++;
@@ -428,10 +444,11 @@ void MainWindow::radicalPressed(const bool)
     n->deleteLater();
     ui->infoKanji->clear();
 
-    if (bpcnt>0)
+    if (bpcnt>0) {
         statusMsg->setText(tr("Found %1 kanji").arg(foundKanji.length()));
-    else
+    } else {
         statusMsg->setText(tr("Ready"));
+    }
 
     ui->listKanji->verticalScrollBar()->setSingleStep(ui->listKanji->verticalScrollBar()->pageStep());
 
@@ -439,9 +456,10 @@ void MainWindow::radicalPressed(const bool)
         startWordSearch(lastWordFinderReq, !foundKanji.isEmpty());
 }
 
-void MainWindow::kanaPressed(const bool)
+void MainWindow::kanaPressed(bool checked)
 {
-    QPushButton *btn = qobject_cast<QPushButton *>(sender());
+    Q_UNUSED(checked)
+    auto *btn = qobject_cast<QPushButton *>(sender());
     if (btn==nullptr) return;
 
     QString k = btn->text();
@@ -460,19 +478,18 @@ void MainWindow::kanjiClicked(const QModelIndex &index)
         ui->infoKanji->setText(tr("Kanji %1 not found in dictionary.").arg(k));
         return;
     }
-    QString msg;
-    int strokes = dict.kanjiStrokes[k];
-    int grade = dict.kanjiGrade[k];
+    int strokes = dict.kanjiStrokes.value(k);
+    int grade = dict.kanjiGrade.value(k);
 
-    msg = QString(infoKanjiTemplate)
-          .arg(cgl->fontResults.family())
-          .arg(ki.kanji)
-          .arg(strokes)
-          .arg(ki.parts.join(tr(" ")))
-          .arg(grade)
-          .arg(ki.onReading.join(tr(", ")))
-          .arg(ki.kunReading.join(tr(", ")))
-          .arg(ki.meaning.join(tr(", ")));
+    QString msg = QString(infoKanjiTemplate)
+                  .arg(cgl->fontResults.family())
+                  .arg(ki.kanji)
+                  .arg(strokes)
+                  .arg(ki.parts.join(QSL(" ")))
+                  .arg(grade)
+                  .arg(ki.onReading.join(QSL(", ")),
+                       ki.kunReading.join(QSL(", ")),
+                       ki.meaning.join(QSL(", ")));
 
     ui->infoKanji->setHtml(msg);
 }
@@ -498,8 +515,8 @@ void MainWindow::screenCapture()
     hide();
     QApplication::processEvents();
 
-    QTimer::singleShot(200, [this](){
-        RegionGrabber* rgnGrab = new RegionGrabber(lastGrabbedRegion);
+    QTimer::singleShot(CDefaults::screenCaptureDelay,this,[this](){
+        auto* rgnGrab = new RegionGrabber(this, lastGrabbedRegion);
         connect(rgnGrab, &RegionGrabber::regionGrabbed,
                 this, &MainWindow::regionGrabbed);
         connect(rgnGrab, &RegionGrabber::regionUpdated,
@@ -511,11 +528,12 @@ void MainWindow::screenCapture()
 void MainWindow::regionGrabbed(const QPixmap &pic)
 {
 #ifdef WITH_OCR
+    const int minOCRPicSize = 20;
     QString text;
 
     if ( !pic.isNull() )
     {
-        if (ocr!=nullptr && pic.width()>20 && pic.height()>20) {
+        if (ocr!=nullptr && pic.width()>minOCRPicSize && pic.height()>minOCRPicSize) {
             QImage cpx = pic.toImage();
             ocr->SetImage(Image2PIX(cpx));
             char* rtext = ocr->GetUTF8Text();
@@ -523,27 +541,29 @@ void MainWindow::regionGrabbed(const QPixmap &pic)
             delete[] rtext;
             QStringList sl = s.split('\n',QString::SkipEmptyParts);
             int maxlen = 0;
-            for (int i=0;i<sl.count();i++)
-                if (sl.at(i).length()>maxlen)
-                    maxlen = sl.at(i).length();
+            for (const auto &i : qAsConst(sl)) {
+                if (i.length()>maxlen)
+                    maxlen = i.length();
+            }
             if (maxlen<sl.count()) { // vertical kanji block, needs transpose
                 QStringList sl2;
-                sl2.clear();
+                sl2.reserve(maxlen);
                 for (int i=0;i<maxlen;i++)
                     sl2 << QString();
-                for (int i=0;i<sl.count();i++)
+                for (int i=0;i<sl.count();i++) {
                     for (int j=0;j<sl.at(i).length();j++)
                         sl2[maxlen-j-1][i]=sl[i][j];
+                }
                 sl = sl2;
             }
             if (!sl.isEmpty()) {
-                text = sl.join(QString(" "));
-                text.replace(QRegExp("[\r\n]+")," ");
+                text = sl.join(QChar(' '));
+                text.replace(QRegularExpression(QSL("[\r\n]+")),QSL(" "));
             }
         }
     }
 
-    RegionGrabber* rgnGrab = qobject_cast<RegionGrabber *>(sender());
+    auto* rgnGrab = qobject_cast<RegionGrabber *>(sender());
     if(rgnGrab)
         rgnGrab->deleteLater();
 
@@ -570,16 +590,21 @@ void MainWindow::closeEvent(QCloseEvent * event)
 
 void MainWindow::settingsDlg()
 {
-    QSettingsDlg *dlg = new QSettingsDlg(this,cgl->fontBtn,cgl->fontLabels,cgl->fontResults,
-                                         cgl->maxHButtons, cgl->maxKanaHButtons, cgl->maxDictionaryResults,
-                                         cgl->getDictPaths());
-    if (dlg->exec()) {
-        cgl->fontBtn = dlg->fontBtn;
-        cgl->fontLabels = dlg->fontLabels;
-        cgl->fontResults = dlg->fontResults;
-        cgl->maxHButtons = dlg->maxHButtons;
-        cgl->maxKanaHButtons = dlg->maxKanaHButtons;
-        cgl->maxDictionaryResults = dlg->maxDictionaryResults;
+    QSettingsDlg dlg(this);
+    dlg.setFontBtn(cgl->fontBtn);
+    dlg.setFontLabels(cgl->fontLabels);
+    dlg.setFontResults(cgl->fontResults);
+    dlg.setMaxHButtons(cgl->maxHButtons);
+    dlg.setMaxKanaHButtons(cgl->maxKanaHButtons);
+    dlg.setMaxDictionaryResults(cgl->maxDictionaryResults);
+    dlg.setDictPaths(cgl->getDictPaths());
+    if (dlg.exec() == QDialog::Accepted) {
+        cgl->fontBtn = dlg.getFontBtn();
+        cgl->fontLabels = dlg.getFontLabels();
+        cgl->fontResults = dlg.getFontResults();
+        cgl->maxHButtons = dlg.getMaxHButtons();
+        cgl->maxKanaHButtons = dlg.getMaxKanaHButtons();
+        cgl->maxDictionaryResults = dlg.getMaxDictionaryResults();
         allowLookup = false;
         renderRadicalsButtons();
         renderKanaButtons();
@@ -587,173 +612,133 @@ void MainWindow::settingsDlg()
         resetRadicals();
         ui->scratchPad->setFont(cgl->fontResults);
         ui->dictWords->setFont(cgl->fontBtn);
-        cgl->setDictPaths(dlg->getDictPaths());
+        cgl->setDictPaths(dlg.getDictPaths());
         lastWordFinderReq.clear();
         fuzzySearch = false;
-        cgl->wordFinder->clear();
+        Q_EMIT stopDictionaryWork();
         cgl->loadDictionaries();
     }
-    dlg->setParent(nullptr);
-    delete dlg;
 }
 
 void MainWindow::opacityList()
 {
-    QAction* ac = qobject_cast<QAction* >(sender());
+    const int opacityMin = 50;
+    const int opacityMax = 100;
+
+    auto* ac = qobject_cast<QAction* >(sender());
     if (ac!=nullptr) {
         int op = ac->data().toInt();
-        if (op>0 && op<=100)
-            setWindowOpacity((qreal)op/100.0);
+        if (op>0 && op<=opacityMax)
+            setWindowOpacity(static_cast<qreal>(op/100.0));
         return;
     }
 
-    QMenu* m = new QMenu();
-    for (int i=0;i<=10;i++) {
-        QAction* ac = new QAction(QString("%1%").arg(50+i*5),nullptr);
+    QMenu m;
+    for (int i=opacityMin, inc=5; i<=opacityMax; i+=inc) {
+        auto* ac = new QAction(QSL("%1%").arg(i),nullptr);
         connect(ac,&QAction::triggered,this,&MainWindow::opacityList);
-        ac->setData(50+i*5);
-        m->addAction(ac);
+        ac->setData(i);
+        m.addAction(ac);
     }
 
-    m->setAttribute(Qt::WA_DeleteOnClose,true);
-    m->popup(QCursor::pos());
-}
-
-void MainWindow::wordListItemActivated( QListWidgetItem * item )
-{
-    QString newValue = item->text();
-
-    if ((ui->scratchPad->findText(newValue)<0) && !newValue.isEmpty())
-        ui->scratchPad->addItem(newValue);
-
-    showTranslationFor( newValue );
+    m.exec(QCursor::pos());
 }
 
 void MainWindow::wordListLookupItem(QListWidgetItem *item)
 {
     QString newValue = item->text();
-
     ui->scratchPad->setEditText(newValue);
+    translateInputFinished();
 }
 
 void MainWindow::wordListSelectionChanged()
 {
-    QList< QListWidgetItem * > selected = ui->dictWords->selectedItems();
+    QList<QListWidgetItem *> selected = ui->dictWords->selectedItems();
 
-    if ( selected.size() )
-        wordListItemActivated( selected.front() );
+    if (!selected.isEmpty() )
+        showTranslationFor(selected.front()->text());
 }
 
 void MainWindow::dictLoadFinished()
 {
-    dictView->unsetCursor();
-
     if (forceFocusToEdit)
         ui->scratchPad->setFocus();
 }
 
-void MainWindow::dictLoadUrl(const QUrl &url)
+void MainWindow::articleReady(const QString &text) const
 {
-    dictView->setSource(url);
+    if (!text.isEmpty())
+        dictView->setHtml(text);
 }
 
-void MainWindow::prefixMatchUpdated()
+void MainWindow::articleLinkClicked(const QUrl &url)
 {
-    updateMatchResults( false );
+    QUrlQuery requ(url);
+    QString word = requ.queryItemValue(QSL("word"));
+    if (word.startsWith('%')) {
+        QByteArray bword = word.toLatin1();
+        if (!bword.isNull() && !bword.isEmpty())
+            word = QUrl::fromPercentEncoding(bword);
+    }
+
+    if (!word.isEmpty())
+        showTranslationFor(word);
 }
 
-void MainWindow::prefixMatchFinished()
+void MainWindow::updateMatchResults(const QStringList& words)
 {
-    updateMatchResults( true );
-}
-
-void MainWindow::updateMatchResults(bool finished)
-{
-    WordFinder::SearchResults const & rawResults = cgl->wordFinder->getResults();
-    WordFinder::SearchResults results;
+    QStringList results;
 
     QString subKanji = foundKanji;
-    subKanji.remove(QRegExp("[\\x2460-\\x24FF]")); // remove enclosed numeric marks
+    subKanji.remove(QRegularExpression(QSL("[\\x2460-\\x24FF]"))); // remove enclosed numeric marks
 
     if (fuzzySearch && !subKanji.isEmpty()) { // radicals is pressed, new kanji search in progress
-        QRegExp pattern(QString("%1[%2]").arg(lastWordFinderReq,subKanji));
+        QRegularExpression pattern(QSL("%1[%2]").arg(lastWordFinderReq,subKanji));
 
-        for ( unsigned x = 0; x < rawResults.size(); ++x ) {
-            if (rawResults[x].first==lastWordFinderReq ||       // requested word itself or
-                    rawResults[x].first.indexOf(pattern)==0) {  // started with requested word and selected kanji
-                results.push_back(rawResults[x]);
+        for (const auto &rawWord : words) {
+            if (rawWord == lastWordFinderReq ||       // requested word itself or
+                    rawWord.indexOf(pattern)==0) {  // started with requested word and selected kanji
+                results.append(rawWord);
             }
         }
-    } else
-        results = rawResults;
-
-    ui->dictWords->setUpdatesEnabled( false );
-
-    for( unsigned x = 0; x < results.size(); ++x )
-    {
-        QListWidgetItem * i = ui->dictWords->item( x );
-
-        if ( !i )
-        {
-            i = new QListWidgetItem( results[ x ].first, ui->dictWords );
-
-            if ( results[ x ].second )
-            {
-                QFont f = i->font();
-                f.setItalic( true );
-                i->setFont( f );
-            }
-            ui->dictWords->addItem( i );
-        }
-        else
-        {
-            if ( i->text() != results[ x ].first )
-                i->setText( results[ x ].first );
-
-            QFont f = i->font();
-            if ( f.italic() != results[ x ].second )
-            {
-                f.setItalic( results[ x ].second );
-                i->setFont( f );
-            }
-        }
-        if (i->text().at(0).direction() == QChar::DirR)
-            i->setTextAlignment(Qt::AlignRight);
-        if (i->text().at(0).direction() == QChar::DirL)
-            i->setTextAlignment(Qt::AlignLeft);
+    } else {
+        results = words;
     }
 
-    while ( ui->dictWords->count() > (int) results.size() )
-    {
-        // Chop off any extra items that were there
-        QListWidgetItem * i = ui->dictWords->takeItem( ui->dictWords->count() - 1 );
+    ui->dictWords->setUpdatesEnabled(false);
 
-        if ( i )
-            delete i;
-        else
+    for(int i = 0; i<results.count(); i++ )
+    {
+        QListWidgetItem *item = ui->dictWords->item(i);
+
+        if (item == nullptr) {
+            item = new QListWidgetItem(results.at(i), ui->dictWords);
+            ui->dictWords->addItem(item);
+        } else {
+            if (item->text() != results.at(i))
+                item->setText(results.at(i));
+        }
+    }
+
+    while (ui->dictWords->count() > results.count()) {
+        QListWidgetItem * i = ui->dictWords->takeItem(ui->dictWords->count() - 1);
+        if (!i)
             break;
+
+        delete i;
     }
 
-    if ( ui->dictWords->count() )
-    {
-        ui->dictWords->scrollToItem( ui->dictWords->item( 0 ), QAbstractItemView::PositionAtTop );
-        ui->dictWords->setCurrentItem( 0, QItemSelectionModel::Clear );
+    if (ui->dictWords->count() > 0) {
+        ui->dictWords->scrollToItem(ui->dictWords->item(0), QAbstractItemView::PositionAtTop);
+        ui->dictWords->setCurrentItem(nullptr, QItemSelectionModel::Clear);
     }
 
-    ui->dictWords->setUpdatesEnabled( true );
-
-    if ( finished )
-    {
-        ui->dictWords->unsetCursor();
-
-        if ( !cgl->wordFinder->getErrorString().isEmpty() )
-            statusBar()->showMessage( tr( "WARNING: %1" ).arg(cgl->wordFinder->getErrorString() ) );
-    }
+    ui->dictWords->setUpdatesEnabled(true);
 
     updateResultsCountLabel();
 }
 
-void MainWindow::translateInputChanged( QString const & newValue )
+void MainWindow::translateInputChanged(const QString &newValue)
 {
     if ((ui->scratchPad->findText(newValue)<0) && !newValue.isEmpty())
         ui->scratchPad->addItem(ui->scratchPad->currentText());
@@ -761,85 +746,48 @@ void MainWindow::translateInputChanged( QString const & newValue )
     startWordSearch(newValue, false);
 }
 
-void MainWindow::startWordSearch( QString const & newValue, bool fuzzy )
+void MainWindow::startWordSearch(const QString &newValue, bool fuzzy)
 {
-    showEmptyTranslationPage();
+    Q_EMIT stopDictionaryWork();
 
-    // If there's some status bar message present, clear it since it may be
-    // about the previous search that has failed.
-    if ( !statusBar()->currentMessage().isEmpty() )
-        statusBar()->clearMessage();
-
-    // If some word is selected in the word list, unselect it. This prevents
-    // triggering a set of spurious activation signals when the list changes.
-
-    if ( ui->dictWords->selectionModel()->hasSelection() )
-        ui->dictWords->setCurrentItem( 0, QItemSelectionModel::Clear );
+    if (ui->dictWords->selectionModel()->hasSelection())
+        ui->dictWords->setCurrentItem(nullptr, QItemSelectionModel::Clear);
 
     QString req = newValue.trimmed();
-
-    if ( !req.size() )
-    {
-        // An empty request always results in an empty result
+    if (req.isEmpty()) {
         lastWordFinderReq.clear();
         fuzzySearch = false;
-        cgl->wordFinder->cancel();
         ui->dictWords->clear();
-        ui->dictWords->unsetCursor();
         updateResultsCountLabel();
-
         return;
     }
 
-    ui->dictWords->setCursor( Qt::WaitCursor );
-
     lastWordFinderReq = req;
     fuzzySearch = fuzzy;
-    cgl->wordFinder->prefixMatch( req, cgl->dictManager->dictionaries,
-                                  static_cast<unsigned long>(cgl->maxDictionaryResults) );
+    cgl->dictManager->wordLookupAsync(req,false,cgl->maxDictionaryResults);
 }
 
 void MainWindow::updateResultsCountLabel()
 {
-    if (ui->dictWords->count()>0)
+    if (ui->dictWords->count()>0) {
         ui->dictBox->setTitle(tr("Dictionary (%1 results)").arg(ui->dictWords->count()));
-    else
+    } else {
         ui->dictBox->setTitle(tr("Dictionary"));
+    }
 }
 
 void MainWindow::translateInputFinished()
 {
     QString word = ui->scratchPad->currentText();
 
-    if ( word.size() )
-        showTranslationFor( word );
+    if (!word.isEmpty() )
+        showTranslationFor(word);
 }
 
-void MainWindow::showTranslationFor( QString const & inWord )
+void MainWindow::showTranslationFor(const QString &word) const
 {
-    QUrl req;
-    req.setScheme( "gdlookup" );
-    req.setHost( "localhost" );
-    QUrlQuery requ;
-    requ.addQueryItem( "word", inWord );
-    req.setQuery(requ);
-    dictLoadUrl(req);
-
-    dictView->setCursor( Qt::WaitCursor );
-}
-
-void MainWindow::showEmptyTranslationPage()
-{
-    QUrl req;
-
-    req.setScheme( "gdlookup" );
-    req.setHost( "localhost" );
-    QUrlQuery requ;
-    requ.addQueryItem( "blank", "1" );
-    req.setQuery(requ);
-    dictLoadUrl(req);
-
-    dictView->setCursor( Qt::WaitCursor );
+    dictView->clear();
+    cgl->dictManager->loadArticleAsync(word);
 }
 
 CAuxDictKeyFilter::CAuxDictKeyFilter(QObject *parent)
@@ -851,9 +799,9 @@ CAuxDictKeyFilter::CAuxDictKeyFilter(QObject *parent)
 bool CAuxDictKeyFilter::eventFilter(QObject *obj, QEvent *event)
 {
     if (event->type()==QEvent::KeyPress) {
-        QKeyEvent *ev = static_cast<QKeyEvent *>(event);
+        auto *ev = dynamic_cast<QKeyEvent *>(event);
         if (ev!=nullptr)
-            emit keyPressed(ev->key());
+            Q_EMIT keyPressed(ev->key());
     }
     return QObject::eventFilter(obj,event);
 }

@@ -1,5 +1,6 @@
 #ifdef WITH_OCR
 
+#include <algorithm>
 #include <QCursor>
 #include <QPoint>
 #include <QPainter>
@@ -30,11 +31,11 @@ QPixmap convertFromNative(xcb_image_t *xcbImage)
         // Qt doesn't have a matching image format. We need to convert manually
         pixels = reinterpret_cast<quint32 *>(xcbImage->data);
         for (uint i = 0; i < (xcbImage->size / 4); i++) {
-            int r = (pixels[i] >> 22) & 0xff;
-            int g = (pixels[i] >> 12) & 0xff;
-            int b = (pixels[i] >>  2) & 0xff;
+            int r = (pixels[i] >> 22) & 0xff; // NOLINT
+            int g = (pixels[i] >> 12) & 0xff; // NOLINT
+            int b = (pixels[i] >>  2) & 0xff; // NOLINT
 
-            pixels[i] = qRgba(r, g, b, 0xff);
+            pixels[i] = qRgba(r, g, b, 0xff); // NOLINT
         }
         // fall through, Qt format is still Format_ARGB32_Premultiplied
         [[clang::fallthrough]];
@@ -76,15 +77,15 @@ bool getWindowGeometry(xcb_window_t window, int &x, int &y, int &w, int &h)
         y = geomReply->y;
         w = geomReply->width;
         h = geomReply->height;
-        free(geomReply);
+        free(geomReply); // NOLINT
         return true;
-    } else {
-        x = 0;
-        y = 0;
-        w = 0;
-        h = 0;
-        return false;
     }
+
+    x = 0;
+    y = 0;
+    w = 0;
+    h = 0;
+    return false;
 }
 
 QPixmap getWindowPixmap(xcb_window_t window, bool blendPointer)
@@ -116,17 +117,17 @@ QPixmap getWindowPixmap(xcb_window_t window, bool blendPointer)
     // and run a crop
 
     if (!xcbImage) {
-        free(geomReply);
-        return getWindowPixmap(QX11Info::appRootWindow(), blendPointer)
-                .copy(geomReply->x, geomReply->y, geomReply->width, geomReply->height);
+        QRect geom(geomReply->x, geomReply->y, geomReply->width, geomReply->height);
+        free(geomReply);  // NOLINT
+        return getWindowPixmap(QX11Info::appRootWindow(), blendPointer).copy(geom);
     }
 
     // now process the image
 
     QPixmap nativePixmap = convertFromNative(xcbImage);
     if (!(blendPointer)) {
-        free(geomReply);
-        free(xcbImage);
+        free(geomReply); // NOLINT
+        free(xcbImage); // NOLINT
         return nativePixmap;
     }
 
@@ -140,10 +141,10 @@ QPixmap getWindowPixmap(xcb_window_t window, bool blendPointer)
     xcb_translate_coordinates_reply_t* translateReply = xcb_translate_coordinates_reply(
                                                             xcbConn, translateCookie, nullptr);
 
-    free(geomRootReply);
-    free(translateReply);
-    free(geomReply);
-    free(xcbImage);
+    free(geomRootReply);  // NOLINT
+    free(translateReply); // NOLINT
+    free(geomReply); // NOLINT
+    free(xcbImage); // NOLINT
 
     return blendCursorImage(nativePixmap, translateReply->dst_x,translateReply->dst_y,
                             geomReply->width, geomReply->height);
@@ -180,7 +181,8 @@ QPixmap blendCursorImage(const QPixmap &pixmap, int x, int y, int width, int hei
 
     // process the image into a QImage
 
-    QImage cursorImage = QImage((quint8 *)pixelData, cursorReply->width, cursorReply->height,
+    QImage cursorImage = QImage(reinterpret_cast<quint8 *>(pixelData),
+                                cursorReply->width, cursorReply->height,
                                 QImage::Format_ARGB32_Premultiplied);
 
     // a small fix for the cursor position for fancier cursors
@@ -198,7 +200,7 @@ QPixmap blendCursorImage(const QPixmap &pixmap, int x, int y, int width, int hei
     painter.drawImage(cursorPos, cursorImage);
 
     // and done
-    free(cursorReply);
+    free(cursorReply); // NOLINT
 
     return blendedPixmap;
 }
@@ -224,8 +226,9 @@ void getWindowsRecursive( QVector<QRect> &windows, xcb_window_t w, int rx, int r
     if ( atts && geom &&
             atts->map_state == XCB_MAP_STATE_VIEWABLE &&
             geom->width >= minSize && geom->height >= minSize ) {
-        int x = 0, y = 0;
-        if ( depth ) {
+        int x = 0;
+        int y = 0;
+        if ( depth != 0 ) {
             x = geom->x + rx;
             y = geom->y + ry;
         }
@@ -241,14 +244,14 @@ void getWindowsRecursive( QVector<QRect> &windows, xcb_window_t w, int rx, int r
             xcb_window_t* child = xcb_query_tree_children(tree);
             for (unsigned int i=0;i<tree->children_len;i++)
                 getWindowsRecursive(windows, child[i], x, y, depth +1);
-            free(tree);
+            free(tree); // NOLINT
         }
     }
-    if (atts != nullptr) free(atts);
-    if (geom != nullptr) free(geom);
+    if (atts != nullptr) free(atts); // NOLINT
+    if (geom != nullptr) free(geom); // NOLINT
 
     if ( depth == 0 )
-        qSort(windows.begin(), windows.end(), lessThan);
+        std::sort(windows.begin(), windows.end(), lessThan);
 }
 
 xcb_window_t findRealWindow( xcb_window_t w, int depth )
@@ -273,11 +276,11 @@ xcb_window_t findRealWindow( xcb_window_t w, int depth )
     xcb_get_property_reply_t* pr = xcb_get_property_reply(c, pc, nullptr);
 
     if (pr && pr->type != XCB_NONE) {
-        free(pr);
+        free(pr); // NOLINT
         return w;
     }
-    free(pr);
-    free(wm_state);
+    free(pr); // NOLINT
+    free(wm_state); // NOLINT
 
     xcb_window_t ret = XCB_NONE;
 
@@ -288,7 +291,7 @@ xcb_window_t findRealWindow( xcb_window_t w, int depth )
         xcb_window_t* child = xcb_query_tree_children(tree);
         for (unsigned int i=0;i<tree->children_len;i++)
             ret = findRealWindow(child[i], depth +1 );
-        free(tree);
+        free(tree); // NOLINT
     }
 
     return ret;
@@ -306,7 +309,7 @@ xcb_window_t windowUnderCursor( bool includeDecorations )
     if (pr && pr->child!=XCB_NONE )
         child = pr->child;
 
-    free(pr);
+    free(pr); // NOLINT
 
     if( !includeDecorations ) {
         xcb_window_t real_child = findRealWindow( child );

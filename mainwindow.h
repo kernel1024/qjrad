@@ -25,7 +25,7 @@ public:
     CAuxDictKeyFilter(QObject *parent = 0);
 protected:
     bool eventFilter(QObject *obj, QEvent *event);
-signals:
+Q_SIGNALS:
     void keyPressed(int key);
 };
 
@@ -35,10 +35,10 @@ class MainWindow : public QMainWindow
 
 public:
     QString foundKanji;
-    QTextBrowser* dictView;
+    QTextBrowser* dictView { nullptr }; // TODO: remove?
 
     explicit MainWindow(QWidget *parent = 0);
-    ~MainWindow();
+    ~MainWindow() override;
 
     void renderRadicalsButtons();
     void renderKanaButtons();
@@ -46,10 +46,7 @@ public:
     void clearKanaButtons();
     QList<int> getSplittersSize();
     QList<int> getDictSplittersSize();
-    int getKanjiGrade(const QChar &kanji);
-
-protected:
-    QKDictionary dict;
+    int getKanjiGrade(QChar kanji) const;
 
 private:
     Ui::MainWindow *ui;
@@ -60,29 +57,28 @@ private:
     bool forceFocusToEdit;
     CAuxDictKeyFilter *keyFilter;
     QRect lastGrabbedRegion;
+    QKDictionary dict;
 
     QString lastWordFinderReq;
     bool fuzzySearch;
 
     void insertOneWidget(QWidget *w, int &row, int &clmn, bool isKana);
-    void closeEvent(QCloseEvent * event);
+    void closeEvent(QCloseEvent * event) override;
 
-    void showTranslationFor( QString const & inWord );
-    void showEmptyTranslationPage();
-    void updateMatchResults( bool finished );
-
+    void showTranslationFor(const QString &word) const;
     void restoreWindow();
     void startWordSearch(const QString &newValue, bool fuzzy);
     void updateResultsCountLabel();
-public slots:
+
+public Q_SLOTS:
     // window geometry and misc
     void centerWindow();
     void updateSplitters();
     // event handlers
     void resetRadicals();
-    void updateKana(const bool checked);
-    void radicalPressed(const bool checked);
-    void kanaPressed(const bool checked);
+    void updateKana(bool checked);
+    void radicalPressed(bool checked);
+    void kanaPressed(bool checked);
     void settingsDlg();
     void opacityList();
     void kanjiClicked(const QModelIndex & index);
@@ -92,16 +88,17 @@ public slots:
     void regionGrabbed(const QPixmap &pic);
     void regionUpdated(const QRect &region);
 
-    // for GoldenDict
-    void prefixMatchUpdated();
-    void prefixMatchFinished();
-    void translateInputChanged( QString const & );
+    void updateMatchResults(const QStringList &words);
+    void translateInputChanged(const QString &newValues);
     void translateInputFinished();
-    void wordListItemActivated( QListWidgetItem * );
-    void wordListLookupItem( QListWidgetItem * item);
+    void wordListLookupItem(QListWidgetItem * item);
     void wordListSelectionChanged();
     void dictLoadFinished();
-    void dictLoadUrl(const QUrl& url);
+    void articleReady(const QString& text) const;
+    void articleLinkClicked(const QUrl& url);
+
+Q_SIGNALS:
+    void stopDictionaryWork();
 
 };
 

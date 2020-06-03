@@ -19,6 +19,7 @@
  */
 
 #include "regiongrabber.h"
+#include "miscutils.h"
 
 #ifdef WITH_OCR
 
@@ -34,11 +35,9 @@
 
 bool RegionGrabber::blendPointer = false;
 
-RegionGrabber::RegionGrabber( const QRect &startSelection ) :
-    QWidget( 0, Qt::X11BypassWindowManagerHint | Qt::WindowStaysOnTopHint | Qt::FramelessWindowHint | Qt::Tool ),
-    selection( startSelection ), mouseDown( false ), newSelection( false ),
-    handleSize( 10 ), mouseOverHandle( 0 ),
-    showHelp( true ), grabbing( false ),
+RegionGrabber::RegionGrabber(QWidget* parent, const QRect &startSelection ) :
+    QWidget( parent, Qt::X11BypassWindowManagerHint | Qt::WindowStaysOnTopHint | Qt::FramelessWindowHint | Qt::Tool ),
+    selection( startSelection ),
     TLHandle(0,0,handleSize,handleSize), TRHandle(0,0,handleSize,handleSize),
     BLHandle(0,0,handleSize,handleSize), BRHandle(0,0,handleSize,handleSize),
     LHandle(0,0,handleSize,handleSize), THandle(0,0,handleSize,handleSize),
@@ -47,14 +46,12 @@ RegionGrabber::RegionGrabber( const QRect &startSelection ) :
     handles << &TLHandle << &TRHandle << &BLHandle << &BRHandle
             << &LHandle << &THandle << &RHandle << &BHandle;
     setMouseTracking( true );
-//    int timeout = KWindowSystem::compositingActive() ? 200 : 50;
-    int timeout = 200;
-    QTimer::singleShot( timeout, this, SLOT(init()) );
+
+    const int timeout = 200;
+    QTimer::singleShot( timeout, this, &RegionGrabber::init );
 }
 
-RegionGrabber::~RegionGrabber()
-{
-}
+RegionGrabber::~RegionGrabber() = default;
 
 void RegionGrabber::init()
 {
@@ -88,6 +85,8 @@ static void drawRect( QPainter *painter, const QRect &r, const QColor &outline, 
 void RegionGrabber::paintEvent( QPaintEvent* e )
 {
     Q_UNUSED( e );
+    const int alphaLevel = 160;
+
     if ( grabbing ) // grabWindow() should just get the background
         return;
 
@@ -97,10 +96,10 @@ void RegionGrabber::paintEvent( QPaintEvent* e )
     QFont font = QToolTip::font();
 
     QColor handleColor = pal.color( QPalette::Active, QPalette::Highlight );
-    handleColor.setAlpha( 160 );
-    QColor overlayColor( 0, 0, 0, 160 );
-    QColor textColor = pal.color( QPalette::Active, QPalette::Text );
-    QColor textBackgroundColor = pal.color( QPalette::Active, QPalette::Base );
+    handleColor.setAlpha( alphaLevel );
+    QColor overlayColor( 0, 0, 0, alphaLevel );
+    const QColor& textColor = pal.color( QPalette::Active, QPalette::Text );
+    const QColor& textBackgroundColor = pal.color( QPalette::Active, QPalette::Base );
     painter.drawPixmap(0, 0, pixmap);
     painter.setFont(font);
 
@@ -136,7 +135,7 @@ void RegionGrabber::paintEvent( QPaintEvent* e )
     // The grabbed region is everything which is covered by the drawn
     // rectangles (border included). This means that there is no 0px
     // selection, since a 0px wide rectangle will always be drawn as a line.
-    QString txt = QString( "%1x%2" ).arg( selection.width() )
+    QString txt = QSL( "%1x%2" ).arg( selection.width() )
                   .arg( selection.height() );
     QRect textRect = painter.boundingRect( rect(), Qt::AlignLeft, txt );
     QRect boundingRect = textRect.adjusted( -4, 0, 0, 0);
@@ -178,12 +177,13 @@ void RegionGrabber::paintEvent( QPaintEvent* e )
     if ( ( r.height() > handleSize*2 && r.width() > handleSize*2 )
          || !mouseDown )
     {
+        const int handleAlpha = 60;
         updateHandles();
         painter.setPen( Qt::NoPen );
         painter.setBrush( handleColor );
         painter.setClipRegion( handleMask( StrokeMask ) );
         painter.drawRect( rect() );
-        handleColor.setAlpha( 60 );
+        handleColor.setAlpha( handleAlpha );
         painter.setBrush( handleColor );
         painter.setClipRegion( handleMask( FillMask ) );
         painter.drawRect( rect() );
@@ -198,10 +198,11 @@ void RegionGrabber::resizeEvent( QResizeEvent* e )
     QRect r = selection;
     r.setTopLeft( limitPointToRect( r.topLeft(), rect() ) );
     r.setBottomRight( limitPointToRect( r.bottomRight(), rect() ) );
-    if ( r.width() <= 1 || r.height() <= 1 ) //this just results in ugly drawing...
+    if ( r.width() <= 1 || r.height() <= 1 ) { //this just results in ugly drawing...
         selection = QRect();
-    else
+    } else {
         selection = normalizeSelection(r);
+    }
 }
 
 void RegionGrabber::mousePressEvent( QMouseEvent* e )
@@ -247,9 +248,10 @@ void RegionGrabber::mouseMoveEvent( QMouseEvent* e )
             QRect r = rect();
             selection = normalizeSelection(QRect( dragStartPoint, limitPointToRect( p, r ) ));
         }
-        else if ( mouseOverHandle == 0 ) // moving the whole selection
+        else if ( mouseOverHandle == nullptr ) // moving the whole selection
         {
-            QRect r = rect().normalized(), s = selectionBeforeDrag.normalized();
+            QRect r = rect().normalized();
+            QRect s = selectionBeforeDrag.normalized();
             QPoint p = s.topLeft() + e->pos() - dragStartPoint;
             r.setBottomRight( r.bottomRight() - QPoint( s.width(), s.height() ) + QPoint( 1, 1 ) );
             if ( !r.isNull() && r.isValid() )
@@ -294,8 +296,7 @@ void RegionGrabber::mouseMoveEvent( QMouseEvent* e )
         if ( selection.isNull() )
             return;
         bool found = false;
-        foreach( QRect* r, handles )
-        {
+        for (const auto& r : qAsConst(handles)) {
             if ( r->contains( e->pos() ) )
             {
                 mouseOverHandle = r;
@@ -305,11 +306,12 @@ void RegionGrabber::mouseMoveEvent( QMouseEvent* e )
         }
         if ( !found )
         {
-            mouseOverHandle = 0;
-            if ( selection.contains( e->pos() ) )
+            mouseOverHandle = nullptr;
+            if ( selection.contains( e->pos() ) ) {
                 setCursor( Qt::OpenHandCursor );
-            else
+            } else {
                 setCursor( Qt::CrossCursor );
+}
         }
         else
         {
@@ -329,13 +331,14 @@ void RegionGrabber::mouseReleaseEvent( QMouseEvent* e )
 {
     mouseDown = false;
     newSelection = false;
-    if ( mouseOverHandle == 0 && selection.contains( e->pos() ) )
+    if ( mouseOverHandle == nullptr && selection.contains( e->pos() ) )
         setCursor( Qt::OpenHandCursor );
     update();
 }
 
-void RegionGrabber::mouseDoubleClickEvent( QMouseEvent* )
+void RegionGrabber::mouseDoubleClickEvent( QMouseEvent* event )
 {
+    Q_UNUSED(event)
     grabRect();
 }
 
@@ -344,8 +347,8 @@ void RegionGrabber::keyPressEvent( QKeyEvent* e )
     QRect r = selection;
     if ( e->key() == Qt::Key_Escape )
     {
-        emit regionUpdated( r );
-        emit regionGrabbed( QPixmap() );
+        Q_EMIT regionUpdated( r );
+        Q_EMIT regionGrabbed( QPixmap() );
     }
     else if ( e->key() == Qt::Key_Enter || e->key() == Qt::Key_Return )
     {
@@ -363,8 +366,8 @@ void RegionGrabber::grabRect()
     if ( !r.isNull() && r.isValid() )
     {
 	grabbing = true;
-        emit regionUpdated( r );
-        emit regionGrabbed( pixmap.copy(r) );
+        Q_EMIT regionUpdated( r );
+        Q_EMIT regionGrabbed( pixmap.copy(r) );
     }
 }
 
@@ -388,7 +391,7 @@ QRegion RegionGrabber::handleMask( MaskType type ) const
 {
     // note: not normalized QRects are bad here, since they will not be drawn
     QRegion mask;
-    foreach( QRect* rect, handles ) {
+    Q_FOREACH( QRect* rect, handles ) {
         if ( type == StrokeMask ) {
             QRegion r( *rect );
             mask += r.subtracted( rect->adjusted( 1, 1, -1, -1 ) );

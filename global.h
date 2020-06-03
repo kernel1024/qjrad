@@ -9,6 +9,8 @@
 #include <QPoint>
 #include <QSize>
 
+#include "zdict/zdictcontroller.h"
+
 #ifdef WITH_OCR
 #include <tesseract/baseapi.h>
 #include <leptonica/allheaders.h>
@@ -19,44 +21,45 @@
 #endif
 
 class MainWindow;
-class ArticleNetworkAccessManager;
-class CGoldenDictMgr;
-class WordFinder;
 class QKDBusDict;
+
+namespace CDefaults {
+const int maxHButtons = 30;
+const int maxKanaHButtons = 15;
+const int maxDictionaryResults = 10000;
+const int dictSplitterPos = 200;
+}
 
 class CGlobal : public QObject
 {
     Q_OBJECT
 private:
     QStringList dictPaths;
-    QDir getHomeDir();
-public:
-    ArticleNetworkAccessManager * netMan;
-    CGoldenDictMgr * dictManager;
-    WordFinder * wordFinder;
-    QKDBusDict* dbusDict;
 
-    QFont fontResults, fontBtn, fontLabels;
-    int maxHButtons, maxKanaHButtons, maxDictionaryResults;
+public:
+    ZDict::ZDictController* dictManager { nullptr }; // TODO: replace with QScopedPointer
+    QKDBusDict* dbusDict { nullptr };
+
+    QFont fontResults;
+    QFont fontBtn;
+    QFont fontLabels;
+    int maxHButtons { CDefaults::maxHButtons };
+    int maxKanaHButtons { CDefaults::maxKanaHButtons };
+    int maxDictionaryResults { CDefaults::maxDictionaryResults };
     // geometry restore
-    bool geomFirstWinPos;
+    bool geomFirstWinPos { true };
     QPoint savedWinPos;
     QSize savedWinSize;
-    int savedDictSplitterPos;
+    int savedDictSplitterPos { CDefaults::dictSplitterPos };
     // ---
 
-    explicit CGlobal(QObject *parent = 0);
-    QString getIndexDir();
+    explicit CGlobal(QObject *parent = nullptr);
     QStringList getDictPaths();
-    void setDictPaths(QStringList paths);
+    void setDictPaths(const QStringList &paths);
     void readSettings();
     void writeSettings(MainWindow *wnd);
     void loadDictionaries();
 
-signals:
-    
-public slots:
-    
 };
 
 extern CGlobal* cgl;
@@ -66,7 +69,6 @@ extern tesseract::TessBaseAPI* ocr;
 
 tesseract::TessBaseAPI *initializeOCR();
 PIX* Image2PIX(QImage& qImage);
-QImage PIX2QImage(PIX *pixImage);
 #endif
 
 #endif // GLOBAL_H

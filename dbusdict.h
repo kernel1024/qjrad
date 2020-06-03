@@ -2,7 +2,7 @@
 #define DBUSDICT_H
 
 #include <QObject>
-#include <goldendictlib/goldendictmgr.hh>
+#include "zdict/zdictcontroller.h"
 
 class MainWindow;
 
@@ -11,20 +11,17 @@ class QKDBusDict : public QObject
     Q_OBJECT
     Q_CLASSINFO("D-Bus Interface", "org.qjrad.dictionary")
 private:
-    ArticleNetworkAccessManager* netMan;
+    ZDict::ZDictController* m_dictManager;
     MainWindow* m_wnd;
 
 public:
-    explicit QKDBusDict(QObject *parent, ArticleNetworkAccessManager* netManager);
+    explicit QKDBusDict(QObject *parent, ZDict::ZDictController* dictManager);
     void setMainWindow(MainWindow* wnd);
 
-signals:
+Q_SIGNALS:
     Q_SCRIPTABLE void gotWordTranslation(const QString& html);
 
-protected slots:
-    void dataReady();
-
-public slots:
+public Q_SLOTS:
     void findWordTranslation(const QString& text);
     void showDictionaryWindow(const QString& text);
 

@@ -4,32 +4,17 @@
 #include <QFontDialog>
 #include <QListWidgetItem>
 
-QSettingsDlg::QSettingsDlg(QWidget *parent, const QFont &fBtn, const QFont &fLabels, const QFont &fResults,
-                           int aMaxHButtons, int aMaxKanaHButtons, int aMaxDictionaryResults,
-                           const QStringList &dictPaths) :
+QSettingsDlg::QSettingsDlg(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::QSettingsDlg)
 {
     ui->setupUi(this);
-    fontBtn = fBtn;
-    fontLabels = fLabels;
-    fontResults = fResults;
-    maxHButtons = aMaxHButtons;
-    maxKanaHButtons = aMaxKanaHButtons;
-    maxDictionaryResults = aMaxDictionaryResults;
-    ui->buttonsCnt->setValue(maxHButtons);
-    ui->buttonsCntKana->setValue(maxKanaHButtons);
-    ui->resultMax->setValue(maxDictionaryResults);
-    connect(ui->btnFontButtons,SIGNAL(clicked()),this,SLOT(changeFont()));
-    connect(ui->btnFontLabels,SIGNAL(clicked()),this,SLOT(changeFont()));
-    connect(ui->btnFontResults,SIGNAL(clicked()),this,SLOT(changeFont()));
-    connect(ui->buttonsCnt,SIGNAL(valueChanged(int)),this,SLOT(cntChanged(int)));
-    connect(ui->buttonsCntKana,SIGNAL(valueChanged(int)),this,SLOT(cntChangedKana(int)));
-    connect(ui->resultMax,SIGNAL(valueChanged(int)),this,SLOT(cntChangedMaxResults(int)));
-    connect(ui->btnAddPath,SIGNAL(clicked()),this,SLOT(addDir()));
-    connect(ui->btnDelPath,SIGNAL(clicked()),this,SLOT(delDir()));
+    connect(ui->btnFontButtons,&QPushButton::clicked,this,&QSettingsDlg::changeFont);
+    connect(ui->btnFontLabels,&QPushButton::clicked,this,&QSettingsDlg::changeFont);
+    connect(ui->btnFontResults,&QPushButton::clicked,this,&QSettingsDlg::changeFont);
+    connect(ui->btnAddPath,&QPushButton::clicked,this,&QSettingsDlg::addDir);
+    connect(ui->btnDelPath,&QPushButton::clicked,this,&QSettingsDlg::delDir);
 
-    ui->dictPaths->addItems(dictPaths);
     updateFonts();
 }
 
@@ -38,60 +23,50 @@ QSettingsDlg::~QSettingsDlg()
     delete ui;
 }
 
-QStringList QSettingsDlg::getDictPaths()
+QStringList QSettingsDlg::getDictPaths() const
 {
     QStringList sl;
+    sl.reserve(ui->dictPaths->count());
     for (int i=0;i<ui->dictPaths->count();i++)
         sl << ui->dictPaths->item(i)->text();
     return sl;
 }
 
+void QSettingsDlg::setDictPaths(const QStringList &paths)
+{
+    ui->dictPaths->addItems(paths);
+}
+
 void QSettingsDlg::updateFonts()
 {
-    ui->testBtn->setFont(fontBtn);
-    ui->testLabels->setFont(fontLabels);
-    ui->testResults->setFont(fontResults);
-    ui->btnFontButtons->setText(fontBtn.family());
-    ui->btnFontLabels->setText(fontLabels.family());
-    ui->btnFontResults->setText(fontResults.family());
+    ui->btnFontButtons->setText(ui->testBtn->font().family());
+    ui->btnFontLabels->setText(ui->testLabels->font().family());
+    ui->btnFontResults->setText(ui->testResults->font().family());
 }
 
 void QSettingsDlg::changeFont()
 {
-    QPushButton *pb = qobject_cast<QPushButton *>(sender());
+    auto *pb = qobject_cast<QPushButton *>(sender());
     if (pb==nullptr) return;
-    bool ok;
+    bool ok = false;
     QFont f = QApplication::font();
-    if (pb==ui->btnFontButtons)
-        f = fontBtn;
-    else if (pb==ui->btnFontLabels)
-        f = fontLabels;
-    else if (pb==ui->btnFontResults)
-        f = fontResults;
+    if (pb==ui->btnFontButtons) {
+        f = ui->testBtn->font();
+    } else if (pb==ui->btnFontLabels) {
+        f = ui->testLabels->font();
+    } else if (pb==ui->btnFontResults) {
+        f = ui->testResults->font();
+    }
     f = QFontDialog::getFont(&ok,f,this);
     if (!ok) return;
-    if (pb==ui->btnFontButtons)
-        fontBtn = f;
-    else if (pb==ui->btnFontLabels)
-        fontLabels = f;
-    else if (pb==ui->btnFontResults)
-        fontResults = f;
+    if (pb==ui->btnFontButtons) {
+        ui->testBtn->setFont(f);
+    } else if (pb==ui->btnFontLabels) {
+        ui->testLabels->setFont(f);
+    } else if (pb==ui->btnFontResults) {
+        ui->testResults->setFont(f);
+    }
     updateFonts();
-}
-
-void QSettingsDlg::cntChanged(int i)
-{
-    maxHButtons = i;
-}
-
-void QSettingsDlg::cntChangedKana(int i)
-{
-    maxKanaHButtons = i;
-}
-
-void QSettingsDlg::cntChangedMaxResults(int i)
-{
-    maxDictionaryResults = i;
 }
 
 void QSettingsDlg::addDir()
@@ -107,4 +82,67 @@ void QSettingsDlg::delDir()
     if (idx<0 || idx>=ui->dictPaths->count()) return;
     QListWidgetItem *a = ui->dictPaths->takeItem(idx);
     delete a;
+}
+
+QFont QSettingsDlg::getFontBtn() const
+{
+    return ui->testBtn->font();
+}
+
+void QSettingsDlg::setFontBtn(const QFont &value)
+{
+    ui->testBtn->setFont(value);
+    updateFonts();
+}
+
+QFont QSettingsDlg::getFontLabels() const
+{
+    return ui->testLabels->font();
+}
+
+void QSettingsDlg::setFontLabels(const QFont &value)
+{
+    ui->testLabels->setFont(value);
+    updateFonts();
+}
+
+QFont QSettingsDlg::getFontResults() const
+{
+    return ui->testResults->font();
+}
+
+void QSettingsDlg::setFontResults(const QFont &value)
+{
+    ui->testResults->setFont(value);
+    updateFonts();
+}
+
+int QSettingsDlg::getMaxHButtons() const
+{
+    return ui->buttonsCnt->value();
+}
+
+void QSettingsDlg::setMaxHButtons(int value)
+{
+    ui->buttonsCnt->setValue(value);
+}
+
+int QSettingsDlg::getMaxKanaHButtons() const
+{
+    return ui->buttonsCntKana->value();
+}
+
+void QSettingsDlg::setMaxKanaHButtons(int value)
+{
+    ui->buttonsCntKana->setValue(value);
+}
+
+int QSettingsDlg::getMaxDictionaryResults() const
+{
+    return ui->resultMax->value();
+}
+
+void QSettingsDlg::setMaxDictionaryResults(int value)
+{
+    ui->resultMax->setValue(value);
 }

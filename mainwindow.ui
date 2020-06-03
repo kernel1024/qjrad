@@ -316,7 +316,7 @@ p, li { white-space: pre-wrap; }
            <enum>Qt::Vertical</enum>
           </property>
           <widget class="QListWidget" name="dictWords"/>
-          <widget class="CGDTextBrowser" name="wdictViewer"/>
+          <widget class="QTextBrowser" name="wdictViewer"/>
          </widget>
         </item>
        </layout>
@@ -328,13 +328,6 @@ p, li { white-space: pre-wrap; }
   <widget class="QStatusBar" name="statusBar"/>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
- <customwidgets>
-  <customwidget>
-   <class>CGDTextBrowser</class>
-   <extends>QTextBrowser</extends>
-   <header>miscutils.h</header>
-  </customwidget>
- </customwidgets>
  <tabstops>
   <tabstop>btnSettings</tabstop>
   <tabstop>btnOpacity</tabstop>

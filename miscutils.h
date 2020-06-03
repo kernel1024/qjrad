@@ -6,26 +6,7 @@
 #include <QTextBrowser>
 #include <QEventLoop>
 
-class CGDTextBrowser : public QTextBrowser
-{
-    Q_OBJECT
-public:
-    explicit CGDTextBrowser(QWidget* parent = nullptr);
-
-protected:
-    QVariant loadResource(int type, const QUrl &url);
-
-};
-
-class CIOEventLoop : public QEventLoop {
-    Q_OBJECT
-public:
-    CIOEventLoop(QObject* parent = nullptr);
-
-public slots:
-    void finished();
-    void timeout();
-};
+#define QSL QStringLiteral // NOLINT
 
 QColor middleColor(const QColor &c1, const QColor &c2, int mul = 50, int div = 100);
 QString makeSimpleHtml(const QString &title, const QString &content);

@@ -9,24 +9,26 @@
 #include <QChar>
 #include <QString>
 
+#define QSL QStringLiteral // NOLINT
+
 class QKRadItem
 {
 public:
     QChar radical;
-    int strokes;
+    int strokes { 0 };
     QString jisCode;
     QString kanji;
-    QKRadItem();
-    ~QKRadItem();
-    QKRadItem(const QKRadItem &other);
-    QKRadItem(const QChar &aRadical);
-    QKRadItem(const QChar &aRadical, int aStrokes);
-    QKRadItem(const QChar &aRadical, int aStrokes, const QString &aJisCode, const QString &aKanji);
-    QKRadItem &operator=(const QKRadItem &other);
+    QKRadItem() = default;
+    ~QKRadItem() = default;
+    QKRadItem(const QKRadItem &other) = default;
+    QKRadItem(QChar aRadical);
+    QKRadItem(QChar aRadical, int aStrokes);
+    QKRadItem(QChar aRadical, int aStrokes, const QString &aJisCode, const QString &aKanji);
+    QKRadItem &operator=(const QKRadItem &other) = default;
     bool operator==(const QKRadItem &s) const;
     bool operator!=(const QKRadItem &s) const;
-    bool operator <(const QKRadItem &ref);
-    bool operator >(const QKRadItem &ref);
+    bool operator <(const QKRadItem &ref) const;
+    bool operator >(const QKRadItem &ref) const;
 };
 
 class QKanjiInfo
@@ -39,15 +41,15 @@ public:
     QStringList onReading;
     QStringList kunReading;
     QStringList meaning;
-    QKanjiInfo();
-    ~QKanjiInfo();
-    QKanjiInfo(const QKanjiInfo &other);
-    QKanjiInfo(const QChar &aKanji, const QStringList &aParts,
+    QKanjiInfo() = default;
+    ~QKanjiInfo() = default;
+    QKanjiInfo(const QKanjiInfo &other) = default;
+    QKanjiInfo(QChar aKanji, const QStringList &aParts,
                const QStringList &aOnReading, const QStringList &aKunReading, const QStringList &aMeaning);
-    QKanjiInfo &operator=(const QKanjiInfo &other);
+    QKanjiInfo &operator=(const QKanjiInfo &other) = default;
     bool operator==(const QKanjiInfo &s) const;
     bool operator!=(const QKanjiInfo &s) const;
-    bool isEmpty();
+    bool isEmpty() const;
 };
 
 class QKDictionary : public QObject
@@ -64,13 +66,9 @@ public:
     explicit QKDictionary(QObject *parent = 0);
 
     bool loadDictionaries();
-    QString sortKanji(const QString &src);
-    QKanjiInfo getKanjiInfo(const QChar &kanji);
-private:
     bool loadKanjiDict();
-signals:
-
-public slots:
+    QString sortKanji(const QString &src);
+    QKanjiInfo getKanjiInfo(QChar kanji);
 
 };
 

@@ -14,7 +14,7 @@ QHash<QChar,QStringList> kanjiParts;
 QHash<QChar,int> kanjiStrokes;
 QHash<QChar,int> kanjiGrade;
 
-bool parseKanjiDict(QString kradfilex, QString kanjidict, QTextStream &qrc) {
+bool parseKanjiDict(const QString& kradfilex, const QString& kanjidict, QTextStream &qrc) {
     // Load radicals list
     QFile fp(kradfilex);
     if (!fp.open(QIODevice::ReadOnly)) {
@@ -50,77 +50,79 @@ bool parseKanjiDict(QString kradfilex, QString kanjidict, QTextStream &qrc) {
     QDomElement root = kanjiDict.documentElement();
 
     for (QDomNode i = root.firstChild();!i.isNull();i=i.nextSibling()) {
-        if (i.nodeName().toLower()!="character") continue;
-        if (i.firstChildElement("literal").isNull() ||
-                !i.firstChildElement("literal").hasChildNodes() ||
-                !i.firstChildElement("literal").firstChild().isText() ||
-                i.firstChildElement("literal").firstChild().toText().data().isEmpty()) {
+        if (i.nodeName().toLower()!=QSL("character")) continue;
+        if (i.firstChildElement(QSL("literal")).isNull() ||
+                !i.firstChildElement(QSL("literal")).hasChildNodes() ||
+                !i.firstChildElement(QSL("literal")).firstChild().isText() ||
+                i.firstChildElement(QSL("literal")).firstChild().toText().data().isEmpty()) {
             qDebug() << "Invalid character entry - no *literal* tag";
             return false;
         }
-        QStringList on, kun, mean;
-        on.clear();
-        kun.clear();
-        mean.clear();
+        QStringList on;
+        QStringList kun;
+        QStringList mean;
 
         // literal - kanji character itself
-        QChar li = i.firstChildElement("literal").firstChild().toText().data().at(0);
+        QChar li = i.firstChildElement(QSL("literal")).firstChild().toText().data().at(0);
 
         if (li.isHighSurrogate() || li.isLowSurrogate() || !li.isPrint()) continue;
 
         // stroke count
-        if (i.firstChildElement("misc").isNull() ||
-                !i.firstChildElement("misc").hasChildNodes() ||
-                i.firstChildElement("misc").firstChildElement("stroke_count").isNull() ||
-                !i.firstChildElement("misc").firstChildElement("stroke_count").hasChildNodes() ||
-                !i.firstChildElement("misc").firstChildElement("stroke_count").firstChild().isText() ||
-                i.firstChildElement("misc").firstChildElement("stroke_count").firstChild().toText().data().isEmpty()) {
-            qDebug() << QString("Invalid character entry - no *stroke_count* tag, for kanji %1.").arg(li);
+        if (i.firstChildElement(QSL("misc")).isNull() ||
+                !i.firstChildElement(QSL("misc")).hasChildNodes() ||
+                i.firstChildElement(QSL("misc")).firstChildElement(QSL("stroke_count")).isNull() ||
+                !i.firstChildElement(QSL("misc")).firstChildElement(QSL("stroke_count")).hasChildNodes() ||
+                !i.firstChildElement(QSL("misc")).firstChildElement(QSL("stroke_count")).firstChild().isText() ||
+                i.firstChildElement(QSL("misc")).firstChildElement(QSL("stroke_count")).firstChild().toText().data().isEmpty()) {
+            qDebug() << QSL("Invalid character entry - no *stroke_count* tag, for kanji %1.").arg(li);
             return false;
         }
-        bool okconv;
+        bool okconv = false;
         // stroke count
-        int lc = i.firstChildElement("misc").firstChildElement("stroke_count").firstChild().toText().data().toInt(&okconv);
+        int lc = i.firstChildElement(QSL("misc")).firstChildElement(QSL("stroke_count"))
+                 .firstChild().toText().data().toInt(&okconv);
         if (!okconv) {
-            qDebug() << QString("Invalid character entry - invalid *stroke_count* tag, for kanji %1.").arg(li);
+            qDebug() << QSL("Invalid character entry - invalid *stroke_count* tag, for kanji %1.").arg(li);
             return false;
         }
 
         // grade: 1..6 - Kyouiku Kanji, 7..8 - remaining Jouyou Kanji, 9..10 - Jinmeiyou Kanji, 11 - remaining unclassified Kanji
-        int lg=11;
-        if (!i.firstChildElement("misc").isNull() &&
-                i.firstChildElement("misc").hasChildNodes() &&
-                !i.firstChildElement("misc").firstChildElement("grade").isNull() &&
-                i.firstChildElement("misc").firstChildElement("grade").hasChildNodes() &&
-                i.firstChildElement("misc").firstChildElement("grade").firstChild().isText() &&
-                !i.firstChildElement("misc").firstChildElement("grade").firstChild().toText().data().isEmpty()) {
-            lg = i.firstChildElement("misc").firstChildElement("grade").firstChild().toText().data().toInt(&okconv);
-            if (!okconv) lg=11;
+        const int unclassifiedKanjiGrade = 11;
+        int lg = unclassifiedKanjiGrade;
+        if (!i.firstChildElement(QSL("misc")).isNull() &&
+                i.firstChildElement(QSL("misc")).hasChildNodes() &&
+                !i.firstChildElement(QSL("misc")).firstChildElement(QSL("grade")).isNull() &&
+                i.firstChildElement(QSL("misc")).firstChildElement(QSL("grade")).hasChildNodes() &&
+                i.firstChildElement(QSL("misc")).firstChildElement(QSL("grade")).firstChild().isText() &&
+                !i.firstChildElement(QSL("misc")).firstChildElement(QSL("grade")).firstChild().toText().data().isEmpty()) {
+            lg = i.firstChildElement(QSL("misc")).firstChildElement(QSL("grade")).firstChild().toText().data().toInt(&okconv);
+            if (!okconv) lg = unclassifiedKanjiGrade;
         }
 
         // reading and meaning
-        if (!i.firstChildElement("reading_meaning").isNull() &&
-                i.firstChildElement("reading_meaning").hasChildNodes() &&
-                !i.firstChildElement("reading_meaning").firstChildElement("rmgroup").isNull() &&
-                i.firstChildElement("reading_meaning").firstChildElement("rmgroup").hasChildNodes()) {
-            for (QDomNode j = i.firstChildElement("reading_meaning").firstChildElement("rmgroup").firstChild();!j.isNull();j=j.nextSibling()) {
-                if (j.nodeName().toLower()=="reading" &&
-                        !j.attributes().namedItem("r_type").isNull() &&
-                        j.attributes().namedItem("r_type").nodeValue().toLower()=="ja_on" &&
+        if (!i.firstChildElement(QSL("reading_meaning")).isNull() &&
+                i.firstChildElement(QSL("reading_meaning")).hasChildNodes() &&
+                !i.firstChildElement(QSL("reading_meaning")).firstChildElement(QSL("rmgroup")).isNull() &&
+                i.firstChildElement(QSL("reading_meaning")).firstChildElement(QSL("rmgroup")).hasChildNodes()) {
+            for (QDomNode j = i.firstChildElement(QSL("reading_meaning")).firstChildElement(QSL("rmgroup")).firstChild();
+                 !j.isNull();j=j.nextSibling()) {
+                if (j.nodeName().toLower()==QSL("reading") &&
+                        !j.attributes().namedItem(QSL("r_type")).isNull() &&
+                        j.attributes().namedItem(QSL("r_type")).nodeValue().toLower()==QSL("ja_on") &&
                         !j.firstChild().isNull() &&
                         j.firstChild().isText() &&
                         !j.firstChild().toText().data().isEmpty()) {
                     on << j.firstChild().toText().data();
                 }
-                if (j.nodeName().toLower()=="reading" &&
-                        !j.attributes().namedItem("r_type").isNull() &&
-                        j.attributes().namedItem("r_type").nodeValue().toLower()=="ja_kun" &&
+                if (j.nodeName().toLower()==QSL("reading") &&
+                        !j.attributes().namedItem(QSL("r_type")).isNull() &&
+                        j.attributes().namedItem(QSL("r_type")).nodeValue().toLower()==QSL("ja_kun") &&
                         !j.firstChild().isNull() &&
                         j.firstChild().isText() &&
                         !j.firstChild().toText().data().isEmpty()) {
                     kun << j.firstChild().toText().data();
                 }
-                if (j.nodeName().toLower()=="meaning" &&
+                if (j.nodeName().toLower()==QSL("meaning") &&
                         j.attributes().isEmpty() &&
                         j.firstChild().isText() &&
                         !j.firstChild().toText().data().isEmpty()) {
@@ -130,18 +132,17 @@ bool parseKanjiDict(QString kradfilex, QString kanjidict, QTextStream &qrc) {
         }
 
         QStringList parts;
-        parts.clear();
         if (kanjiParts.contains(li))
-            parts = kanjiParts[li];
+            parts = kanjiParts.value(li);
 
         // add kanji to resources
-        QFile res(QString("k%1.bin").arg(li.unicode()));
+        QFile res(QSL("k%1.bin").arg(li.unicode()));
         if (res.open(QIODevice::WriteOnly)) {
             QDataStream rout(&res);
             QKanjiInfo ki = QKanjiInfo(li,parts,on,kun,mean);
             rout << ki;
             res.close();
-            qrc << QString("<file alias=\"kanji-%1\">k%1.bin</file>").arg(li.unicode()) << endl;
+            qrc << QSL("<file alias=\"kanji-%1\">k%1.bin</file>").arg(li.unicode()) << endl;
             kanjiStrokes[li] = lc;
             kanjiGrade[li] = lg;
         }
@@ -156,7 +157,7 @@ int main(int argc, char *argv[])
     qRegisterMetaTypeStreamOperators<QKanjiInfo>("QKanjiInfo");
     QCoreApplication a(argc, argv);
 
-    if (a.arguments().count()!=3) {
+    if (QCoreApplication::arguments().count()!=3) {
         qDebug() << "Kanji dictionary conversion tool";
         qDebug() << "  Usage: kanjicnv <kradfilex> <kanjidict2.xml>";
         qDebug() << " ";
@@ -165,20 +166,21 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    QFile f("kanjidic.qrc");
+    QFile f(QSL("kanjidic.qrc"));
     if (!f.open(QIODevice::WriteOnly | QIODevice::Truncate)) return 1;
 
     QTextStream fout(&f);
     fout << "<RCC>" << endl << "<qresource prefix=\"/kanjidic/\">" << endl;
 
-    parseKanjiDict(a.arguments().at(1),a.arguments().at(2),fout);
+    parseKanjiDict(QCoreApplication::arguments().at(1),
+                   QCoreApplication::arguments().at(2),fout);
 
-    QFile rstr(QString("kanjiinfo.bin"));
+    QFile rstr(QSL("kanjiinfo.bin"));
     if (rstr.open(QIODevice::WriteOnly)) {
         QDataStream sout(&rstr);
         sout << kanjiStrokes << kanjiGrade;
         rstr.close();
-        fout << QString("<file alias=\"summary\">kanjiinfo.bin</file>") << endl;
+        fout << QSL("<file alias=\"summary\">kanjiinfo.bin</file>") << endl;
     }
 
     fout << "</qresource>" << endl << "</RCC>" << endl;

@@ -7,13 +7,11 @@
 #include <QCoreApplication>
 #include <QResource>
 #include <QDebug>
+#include <algorithm>
 
 QKDictionary::QKDictionary(QObject *parent) :
     QObject(parent)
 {
-    radicalsLookup.clear();
-    kanjiParts.clear();
-    errorString.clear();
 }
 
 bool QKDictionary::loadDictionaries()
@@ -24,7 +22,7 @@ bool QKDictionary::loadDictionaries()
     errorString.clear();
 
     // Load radicals dictionary
-    QFile fr(":/data/radkfilex.utf8");
+    QFile fr(QSL(":/data/radkfilex.utf8"));
     if (!fr.open(QIODevice::ReadOnly)) {
         errorString = tr("cannot read kanji lookup table");
         return false;
@@ -34,13 +32,13 @@ bool QKDictionary::loadDictionaries()
     while (!sr.atEnd()) {
         QString s = sr.readLine().trimmed();
         if (s.startsWith('#')) continue; // comment
-        else if (s.startsWith('$')) { // new radical
+        if (s.startsWith('$')) { // new radical
             QStringList sl = s.split(' ');
             QChar krad = sl.at(1).at(0);
-            bool okconv;
+            bool okconv = false;
             int kst = sl.at(2).toInt(&okconv);
             if (!okconv) kst = 0;
-            radicalsLookup << QKRadItem(krad,kst,"","");
+            radicalsLookup << QKRadItem(krad,kst,QString(),QString());
         } else if (!s.isEmpty() && !radicalsLookup.isEmpty()) {
             radicalsLookup.last().kanji += s;
         }
@@ -48,7 +46,7 @@ bool QKDictionary::loadDictionaries()
     fr.close();
 
     // Load radicals list
-    QFile fp(":/data/kradfilex.utf8");
+    QFile fp(QSL(":/data/kradfilex.utf8"));
     if (!fp.open(QIODevice::ReadOnly)) {
         errorString = tr("cannot read kanji radicals list");
         return false;
@@ -74,20 +72,22 @@ QKDictionary *kdict = nullptr;
 QMutex kdictmutex;
 
 // Kanji sorting magic
-bool kanjiLessThan(const QChar &c1, const QChar &c2)
+bool kanjiLessThan(QChar c1, QChar c2)
 {
-    if (kdict==nullptr) return (c1<c2); // in case if kdict is not present - simply compare unicode characters
-    if (!kdict->kanjiStrokes.contains(c1) || !kdict->kanjiStrokes.contains(c2)) return (c1<c2); // also here
-    // in-depth compare with kdict info
-    if (kdict->kanjiStrokes[c1]!=kdict->kanjiStrokes[c2]) // if strokes count differs...
-        return (kdict->kanjiStrokes[c1]<kdict->kanjiStrokes[c2]); // compare by strokes count
-    else {
-        if (kdict->kanjiGrade[c1]!=kdict->kanjiGrade[c2]) // if grade level differs...
-            return (kdict->kanjiGrade[c1]!=kdict->kanjiGrade[c2]); // compare by grade
-        else
-            return (c1<c2); // compare by unicode code inside same-grade/same-strokes groups
-    }
+    if (kdict==nullptr) // in case if kdict is not present - simply compare unicode characters
+        return (c1<c2);
 
+    if (!kdict->kanjiStrokes.contains(c1) || !kdict->kanjiStrokes.contains(c2)) // also here
+        return (c1<c2);
+
+    // in-depth compare with kdict info
+    if (kdict->kanjiStrokes.value(c1)!=kdict->kanjiStrokes.value(c2)) // if strokes count differs...
+        return (kdict->kanjiStrokes.value(c1)<kdict->kanjiStrokes.value(c2)); // compare by strokes count
+
+    if (kdict->kanjiGrade.value(c1)!=kdict->kanjiGrade.value(c2)) // if grade level differs...
+        return (kdict->kanjiGrade.value(c1)!=kdict->kanjiGrade.value(c2)); // compare by grade
+
+    return (c1<c2); // compare by unicode code inside same-grade/same-strokes groups
 }
 
 QString QKDictionary::sortKanji(const QString &src)
@@ -95,15 +95,15 @@ QString QKDictionary::sortKanji(const QString &src)
     kdictmutex.lock();
     kdict = this;
     QString s = src;
-    qSort(s.begin(),s.end(),kanjiLessThan);
+    std::sort(s.begin(),s.end(),kanjiLessThan);
     kdictmutex.unlock();
     return s;
 }
 
-QKanjiInfo QKDictionary::getKanjiInfo(const QChar &kanji)
+QKanjiInfo QKDictionary::getKanjiInfo(QChar kanji)
 {
     QKanjiInfo ki = QKanjiInfo();
-    QFile f(QString(":/kanjidic/kanji-%1").arg(kanji.unicode()));
+    QFile f(QSL(":/kanjidic/kanji-%1").arg(kanji.unicode()));
     if (!f.open(QIODevice::ReadOnly)) return ki;
     QDataStream fb(&f);
     fb >> ki;
@@ -113,19 +113,19 @@ QKanjiInfo QKDictionary::getKanjiInfo(const QChar &kanji)
 
 bool QKDictionary::loadKanjiDict()
 {
-    QDir::setSearchPaths("kanjidict",QProcessEnvironment::systemEnvironment().value("PATH").split(':'));
-    QDir::addSearchPath("kanjidict",QCoreApplication::applicationDirPath());
-    QDir::addSearchPath("kanjidict",QDir::currentPath());
-    QDir::addSearchPath("kanjidict","/usr/share/qjrad");
-    QDir::addSearchPath("kanjidict","/usr/local/share/qjrad");
-    QFileInfo fi("kanjidict:kanjidic.rcc");
+    QDir::setSearchPaths(QSL("kanjidict"),QProcessEnvironment::systemEnvironment().value(QSL("PATH")).split(':'));
+    QDir::addSearchPath(QSL("kanjidict"),QCoreApplication::applicationDirPath());
+    QDir::addSearchPath(QSL("kanjidict"),QDir::currentPath());
+    QDir::addSearchPath(QSL("kanjidict"),QSL("/usr/share/qjrad"));
+    QDir::addSearchPath(QSL("kanjidict"),QSL("/usr/local/share/qjrad"));
+    QFileInfo fi(QSL("kanjidict:kanjidic.rcc"));
     if (!fi.exists()) {
         errorString = tr("Unable to locate main kanjidic.rcc file");
         return false;
     }
-    QResource::registerResource("kanjidict:kanjidic.rcc");
+    QResource::registerResource(QSL("kanjidict:kanjidic.rcc"));
 
-    QFile f(":/kanjidic/summary");
+    QFile f(QSL(":/kanjidic/summary"));
     if (!f.open(QIODevice::ReadOnly)) {
         errorString = tr("Unable to load strokes info from dictionary");
         return false;
@@ -137,29 +137,7 @@ bool QKDictionary::loadKanjiDict()
     return true;
 }
 
-QKRadItem::QKRadItem()
-{
-    radical = QChar();
-    strokes = 0;
-    jisCode.clear();
-    kanji.clear();
-}
-
-QKRadItem::~QKRadItem()
-{
-    jisCode.clear();
-    kanji.clear();
-}
-
-QKRadItem::QKRadItem(const QKRadItem &other)
-{
-    radical = other.radical;
-    strokes = other.strokes;
-    jisCode = other.jisCode;
-    kanji = other.kanji;
-}
-
-QKRadItem::QKRadItem(const QChar &aRadical)
+QKRadItem::QKRadItem(QChar aRadical)
 {
     radical = aRadical;
     strokes = 0;
@@ -167,7 +145,7 @@ QKRadItem::QKRadItem(const QChar &aRadical)
     kanji.clear();
 }
 
-QKRadItem::QKRadItem(const QChar &aRadical, int aStrokes)
+QKRadItem::QKRadItem(QChar aRadical, int aStrokes)
 {
     radical = aRadical;
     strokes = aStrokes;
@@ -175,7 +153,7 @@ QKRadItem::QKRadItem(const QChar &aRadical, int aStrokes)
     kanji.clear();
 }
 
-QKRadItem::QKRadItem(const QChar &aRadical, int aStrokes, const QString &aJisCode, const QString &aKanji)
+QKRadItem::QKRadItem(QChar aRadical, int aStrokes, const QString &aJisCode, const QString &aKanji)
 {
     radical = aRadical;
     strokes = aStrokes;
@@ -193,74 +171,29 @@ bool QKRadItem::operator !=(const QKRadItem &s) const
     return (radical!=s.radical);
 }
 
-bool QKRadItem::operator <(const QKRadItem &ref)
+bool QKRadItem::operator <(const QKRadItem &ref) const
 {
     if (strokes==ref.strokes)
         return (radical<ref.radical);
-    else
-        return (strokes<ref.strokes);
+
+    return (strokes<ref.strokes);
 }
 
-bool QKRadItem::operator >(const QKRadItem &ref)
+bool QKRadItem::operator >(const QKRadItem &ref) const
 {
     if (strokes==ref.strokes)
         return (radical>ref.radical);
-    else
-        return (strokes>ref.strokes);
+
+    return (strokes>ref.strokes);
 }
 
-QKRadItem & QKRadItem::operator =(const QKRadItem &other)
-{
-    radical = other.radical;
-    strokes = other.strokes;
-    jisCode = other.jisCode;
-    kanji = other.kanji;
-    return *this;
-}
-
-QKanjiInfo::QKanjiInfo()
-{
-    kanji = QChar();
-    parts.clear();
-    onReading.clear();
-    kunReading.clear();
-    meaning.clear();
-}
-
-QKanjiInfo::~QKanjiInfo()
-{
-    parts.clear();
-    onReading.clear();
-    kunReading.clear();
-    meaning.clear();
-}
-
-QKanjiInfo::QKanjiInfo(const QKanjiInfo &other)
-{
-    kanji = other.kanji;
-    parts = other.parts;
-    onReading = other.onReading;
-    kunReading = other.kunReading;
-    meaning = other.meaning;
-}
-
-QKanjiInfo::QKanjiInfo(const QChar &aKanji, const QStringList &aParts, const QStringList &aOnReading, const QStringList &aKunReading, const QStringList &aMeaning)
+QKanjiInfo::QKanjiInfo(QChar aKanji, const QStringList &aParts, const QStringList &aOnReading, const QStringList &aKunReading, const QStringList &aMeaning)
 {
     kanji = aKanji;
     parts = aParts;
     onReading = aOnReading;
     kunReading = aKunReading;
     meaning = aMeaning;
-}
-
-QKanjiInfo &QKanjiInfo::operator =(const QKanjiInfo &other)
-{
-    kanji = other.kanji;
-    parts = other.parts;
-    onReading = other.onReading;
-    kunReading = other.kunReading;
-    meaning = other.meaning;
-    return *this;
 }
 
 bool QKanjiInfo::operator ==(const QKanjiInfo &s) const
@@ -273,12 +206,10 @@ bool QKanjiInfo::operator !=(const QKanjiInfo &s) const
     return (kanji != s.kanji);
 }
 
-bool QKanjiInfo::isEmpty()
+bool QKanjiInfo::isEmpty() const
 {
     return (kanji.isNull());
 }
-
-
 
 QDataStream &operator <<(QDataStream &out, const QKanjiInfo &obj)
 {

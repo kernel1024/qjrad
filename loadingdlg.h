@@ -13,12 +13,12 @@ class CLoading : public QDialog
     
 public:
     explicit CLoading(QWidget *parent = 0);
-    ~CLoading();
+    ~CLoading() override;
     
 private:
     Ui::CLoading *ui;
 
-public slots:
+public Q_SLOTS:
     void addLogMsg(const QString& msg);
 
 };
