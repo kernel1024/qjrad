@@ -10,22 +10,19 @@ const int enclosedNumericsStart = 0x2460;
 const int enclosedNumericsEnd = 0x24ff;
 }
 
-class MainWindow;
+class ZMainWindow;
 
-class QKanjiModel : public QAbstractListModel
+class ZKanjiModel : public QAbstractListModel
 {
     Q_OBJECT
 private:
     QString kanjiList;
-    QFont kanjiFont;
-    QFont markFont;
-    MainWindow* mainWnd { nullptr };
+    ZMainWindow* mainWnd { nullptr };
 
     void createHxBox(QVector<QLine> &rrct, int sz, int hv = 2) const;
 
 public:
-    QKanjiModel(QObject *parent, const QString &KanjiList, const QFont &KanjiFont,
-                         const QFont &MarkFont);
+    ZKanjiModel(QObject *parent, const QString &KanjiList);
     Qt::ItemFlags flags(const QModelIndex & index) const;
     QVariant data(const QModelIndex & index, int role = Qt::DisplayRole) const;
     int rowCount( const QModelIndex & parent = QModelIndex()) const;

@@ -7,43 +7,26 @@ namespace Ui {
     class QSettingsDlg;
 }
 
-class QSettingsDlg : public QDialog
+class ZSettingsDialog : public QDialog
 {
     Q_OBJECT
     
 public:
-    explicit QSettingsDlg(QWidget *parent = nullptr);
-    ~QSettingsDlg() override;
-
-    QStringList getDictPaths() const;
-    void setDictPaths(const QStringList &paths);
-    
-    QFont getFontBtn() const;
-    void setFontBtn(const QFont &value);
-
-    QFont getFontLabels() const;
-    void setFontLabels(const QFont &value);
-
-    QFont getFontResults() const;
-    void setFontResults(const QFont &value);
-
-    int getMaxHButtons() const;
-    void setMaxHButtons(int value);
-
-    int getMaxKanaHButtons() const;
-    void setMaxKanaHButtons(int value);
-
-    int getMaxDictionaryResults() const;
-    void setMaxDictionaryResults(int value);
+    explicit ZSettingsDialog(QWidget *parent = nullptr);
+    ~ZSettingsDialog() override;
+    void loadSettings();
+    void saveSettings();
 
 private:
     Ui::QSettingsDlg *ui;
     void updateFonts();
+    void updateOCRLanguages();
 
-public Q_SLOTS:
+private Q_SLOTS:
     void changeFont();
     void addDir();
     void delDir();
+    void ocrDatapath();
 };
 
 #endif // SETTINGSDLG_H

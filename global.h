@@ -20,8 +20,10 @@
 #endif
 #endif
 
-class MainWindow;
-class QKDBusDict;
+#define zF (ZGlobal::instance())
+
+class ZMainWindow;
+class ZKanjiDBusDict;
 
 namespace CDefaults {
 const int maxHButtons = 30;
@@ -30,45 +32,39 @@ const int maxDictionaryResults = 10000;
 const int dictSplitterPos = 200;
 }
 
-class CGlobal : public QObject
+class ZGlobal : public QObject
 {
     Q_OBJECT
-private:
-    QStringList dictPaths;
-
 public:
     ZDict::ZDictController* dictManager { nullptr }; // TODO: replace with QScopedPointer
-    QKDBusDict* dbusDict { nullptr };
+    ZKanjiDBusDict* dbusDict { nullptr };
 
-    QFont fontResults;
-    QFont fontBtn;
-    QFont fontLabels;
-    int maxHButtons { CDefaults::maxHButtons };
-    int maxKanaHButtons { CDefaults::maxKanaHButtons };
-    int maxDictionaryResults { CDefaults::maxDictionaryResults };
-    // geometry restore
-    bool geomFirstWinPos { true };
-    QPoint savedWinPos;
-    QSize savedWinSize;
-    int savedDictSplitterPos { CDefaults::dictSplitterPos };
-    // ---
+    QFont fontResults() const;
+    QFont fontBtn() const;
+    QFont fontLabels() const;
 
-    explicit CGlobal(QObject *parent = nullptr);
+    explicit ZGlobal(QObject *parent = nullptr);
+    ~ZGlobal() override;
+    static ZGlobal* instance();
+    void initialize();
+
     QStringList getDictPaths();
-    void setDictPaths(const QStringList &paths);
-    void readSettings();
-    void writeSettings(MainWindow *wnd);
     void loadDictionaries();
-
-};
-
-extern CGlobal* cgl;
+    static QColor middleColor(const QColor &c1, const QColor &c2, int mul = 50, int div = 100);
+    static QString makeSimpleHtml(const QString &title, const QString &content);
 
 #ifdef WITH_OCR
-extern tesseract::TessBaseAPI* ocr;
+    QString ocrGetActiveLanguage();
+    QString ocrGetDatapath();
+    void initializeOCR();
+    QString processImageWithOCR(const QImage& image);
+    bool isOCRReady() const;
 
-tesseract::TessBaseAPI *initializeOCR();
-PIX* Image2PIX(QImage& qImage);
+private:
+    tesseract::TessBaseAPI* m_ocr { nullptr };
+    static PIX* Image2PIX(const QImage& qImage);
+
 #endif
+};
 
 #endif // GLOBAL_H

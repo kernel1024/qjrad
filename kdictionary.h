@@ -9,66 +9,64 @@
 #include <QChar>
 #include <QString>
 
-#define QSL QStringLiteral // NOLINT
-
-class QKRadItem
+class ZKanjiRadicalItem
 {
 public:
     QChar radical;
     int strokes { 0 };
     QString jisCode;
     QString kanji;
-    QKRadItem() = default;
-    ~QKRadItem() = default;
-    QKRadItem(const QKRadItem &other) = default;
-    QKRadItem(QChar aRadical);
-    QKRadItem(QChar aRadical, int aStrokes);
-    QKRadItem(QChar aRadical, int aStrokes, const QString &aJisCode, const QString &aKanji);
-    QKRadItem &operator=(const QKRadItem &other) = default;
-    bool operator==(const QKRadItem &s) const;
-    bool operator!=(const QKRadItem &s) const;
-    bool operator <(const QKRadItem &ref) const;
-    bool operator >(const QKRadItem &ref) const;
+    ZKanjiRadicalItem() = default;
+    ~ZKanjiRadicalItem() = default;
+    ZKanjiRadicalItem(const ZKanjiRadicalItem &other) = default;
+    ZKanjiRadicalItem(QChar aRadical);
+    ZKanjiRadicalItem(QChar aRadical, int aStrokes);
+    ZKanjiRadicalItem(QChar aRadical, int aStrokes, const QString &aJisCode, const QString &aKanji);
+    ZKanjiRadicalItem &operator=(const ZKanjiRadicalItem &other) = default;
+    bool operator==(const ZKanjiRadicalItem &s) const;
+    bool operator!=(const ZKanjiRadicalItem &s) const;
+    bool operator <(const ZKanjiRadicalItem &ref) const;
+    bool operator >(const ZKanjiRadicalItem &ref) const;
 };
 
-class QKanjiInfo
+class ZKanjiInfo
 {
-    friend QDataStream &operator<<(QDataStream &out, const QKanjiInfo &obj);
-    friend QDataStream &operator>>(QDataStream &in, QKanjiInfo &obj);
+    friend QDataStream &operator<<(QDataStream &out, const ZKanjiInfo &obj);
+    friend QDataStream &operator>>(QDataStream &in, ZKanjiInfo &obj);
 public:
     QChar kanji;
     QStringList parts;
     QStringList onReading;
     QStringList kunReading;
     QStringList meaning;
-    QKanjiInfo() = default;
-    ~QKanjiInfo() = default;
-    QKanjiInfo(const QKanjiInfo &other) = default;
-    QKanjiInfo(QChar aKanji, const QStringList &aParts,
+    ZKanjiInfo() = default;
+    ~ZKanjiInfo() = default;
+    ZKanjiInfo(const ZKanjiInfo &other) = default;
+    ZKanjiInfo(QChar aKanji, const QStringList &aParts,
                const QStringList &aOnReading, const QStringList &aKunReading, const QStringList &aMeaning);
-    QKanjiInfo &operator=(const QKanjiInfo &other) = default;
-    bool operator==(const QKanjiInfo &s) const;
-    bool operator!=(const QKanjiInfo &s) const;
+    ZKanjiInfo &operator=(const ZKanjiInfo &other) = default;
+    bool operator==(const ZKanjiInfo &s) const;
+    bool operator!=(const ZKanjiInfo &s) const;
     bool isEmpty() const;
 };
 
-class QKDictionary : public QObject
+class ZKanjiDictionary : public QObject
 {
     Q_OBJECT
 public:
-    QList<QKRadItem> radicalsLookup;
+    QList<ZKanjiRadicalItem> radicalsLookup;
     QHash<QChar,QStringList> kanjiParts;
     QHash<QChar,int> kanjiStrokes;
     QHash<QChar,int> kanjiGrade;
 
     QString errorString;
 
-    explicit QKDictionary(QObject *parent = 0);
+    explicit ZKanjiDictionary(QObject *parent = 0);
 
     bool loadDictionaries();
     bool loadKanjiDict();
     QString sortKanji(const QString &src);
-    QKanjiInfo getKanjiInfo(QChar kanji);
+    ZKanjiInfo getKanjiInfo(QChar kanji);
 
 };
 

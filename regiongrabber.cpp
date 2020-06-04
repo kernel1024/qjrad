@@ -19,7 +19,8 @@
  */
 
 #include "regiongrabber.h"
-#include "miscutils.h"
+#include "global.h"
+#include "qsl.h"
 
 #ifdef WITH_OCR
 
@@ -33,9 +34,9 @@
 
 #include "xcbtools.h"
 
-bool RegionGrabber::blendPointer = false;
+bool ZRegionGrabber::blendPointer = false;
 
-RegionGrabber::RegionGrabber(QWidget* parent, const QRect &startSelection ) :
+ZRegionGrabber::ZRegionGrabber(QWidget* parent, const QRect &startSelection ) :
     QWidget( parent, Qt::X11BypassWindowManagerHint | Qt::WindowStaysOnTopHint | Qt::FramelessWindowHint | Qt::Tool ),
     selection( startSelection ),
     TLHandle(0,0,handleSize,handleSize), TRHandle(0,0,handleSize,handleSize),
@@ -48,14 +49,14 @@ RegionGrabber::RegionGrabber(QWidget* parent, const QRect &startSelection ) :
     setMouseTracking( true );
 
     const int timeout = 200;
-    QTimer::singleShot( timeout, this, &RegionGrabber::init );
+    QTimer::singleShot( timeout, this, &ZRegionGrabber::init );
 }
 
-RegionGrabber::~RegionGrabber() = default;
+ZRegionGrabber::~ZRegionGrabber() = default;
 
-void RegionGrabber::init()
+void ZRegionGrabber::init()
 {
-    pixmap = getWindowPixmap( QX11Info::appRootWindow(), blendPointer );
+    pixmap = ZXCBTools::getWindowPixmap( QX11Info::appRootWindow(), blendPointer );
     resize( pixmap.size() );
     move( 0, 0 );
     setCursor( Qt::CrossCursor );
@@ -82,7 +83,7 @@ static void drawRect( QPainter *painter, const QRect &r, const QColor &outline, 
     painter->restore();
 }
 
-void RegionGrabber::paintEvent( QPaintEvent* e )
+void ZRegionGrabber::paintEvent( QPaintEvent* e )
 {
     Q_UNUSED( e );
     const int alphaLevel = 160;
@@ -190,7 +191,7 @@ void RegionGrabber::paintEvent( QPaintEvent* e )
     }
 }
 
-void RegionGrabber::resizeEvent( QResizeEvent* e )
+void ZRegionGrabber::resizeEvent( QResizeEvent* e )
 {
     Q_UNUSED( e );
     if ( selection.isNull() )
@@ -205,7 +206,7 @@ void RegionGrabber::resizeEvent( QResizeEvent* e )
     }
 }
 
-void RegionGrabber::mousePressEvent( QMouseEvent* e )
+void ZRegionGrabber::mousePressEvent( QMouseEvent* e )
 {
     showHelp = !helpTextRect.contains( e->pos() );
     if ( e->button() == Qt::LeftButton )
@@ -232,7 +233,7 @@ void RegionGrabber::mousePressEvent( QMouseEvent* e )
     update();
 }
 
-void RegionGrabber::mouseMoveEvent( QMouseEvent* e )
+void ZRegionGrabber::mouseMoveEvent( QMouseEvent* e )
 {
     bool shouldShowHelp = !helpTextRect.contains( e->pos() );
     if (shouldShowHelp != showHelp) {
@@ -327,7 +328,7 @@ void RegionGrabber::mouseMoveEvent( QMouseEvent* e )
     }
 }
 
-void RegionGrabber::mouseReleaseEvent( QMouseEvent* e )
+void ZRegionGrabber::mouseReleaseEvent( QMouseEvent* e )
 {
     mouseDown = false;
     newSelection = false;
@@ -336,13 +337,13 @@ void RegionGrabber::mouseReleaseEvent( QMouseEvent* e )
     update();
 }
 
-void RegionGrabber::mouseDoubleClickEvent( QMouseEvent* event )
+void ZRegionGrabber::mouseDoubleClickEvent( QMouseEvent* event )
 {
     Q_UNUSED(event)
     grabRect();
 }
 
-void RegionGrabber::keyPressEvent( QKeyEvent* e )
+void ZRegionGrabber::keyPressEvent( QKeyEvent* e )
 {
     QRect r = selection;
     if ( e->key() == Qt::Key_Escape )
@@ -360,7 +361,7 @@ void RegionGrabber::keyPressEvent( QKeyEvent* e )
     }
 }
 
-void RegionGrabber::grabRect()
+void ZRegionGrabber::grabRect()
 {
     QRect r = selection;
     if ( !r.isNull() && r.isValid() )
@@ -371,7 +372,7 @@ void RegionGrabber::grabRect()
     }
 }
 
-void RegionGrabber::updateHandles()
+void ZRegionGrabber::updateHandles()
 {
     QRect r = selection;
     int s2 = handleSize / 2;
@@ -387,7 +388,7 @@ void RegionGrabber::updateHandles()
     BHandle.moveBottomLeft( QPoint( r.x() + r.width() / 2 - s2, r.bottom() ) );
 }
 
-QRegion RegionGrabber::handleMask( MaskType type ) const
+QRegion ZRegionGrabber::handleMask( MaskType type ) const
 {
     // note: not normalized QRects are bad here, since they will not be drawn
     QRegion mask;
@@ -402,7 +403,7 @@ QRegion RegionGrabber::handleMask( MaskType type ) const
     return mask;
 }
 
-QPoint RegionGrabber::limitPointToRect( const QPoint &p, const QRect &r ) const
+QPoint ZRegionGrabber::limitPointToRect( const QPoint &p, const QRect &r ) const
 {
     QPoint q;
     q.setX( p.x() < r.x() ? r.x() : p.x() < r.right() ? p.x() : r.right() );
@@ -410,7 +411,7 @@ QPoint RegionGrabber::limitPointToRect( const QPoint &p, const QRect &r ) const
     return q;
 }
 
-QRect RegionGrabber::normalizeSelection( const QRect &s ) const
+QRect ZRegionGrabber::normalizeSelection( const QRect &s ) const
 {
     QRect r = s;
     if (r.width() <= 0) {

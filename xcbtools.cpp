@@ -12,6 +12,8 @@
 
 static const int minSize = 8;
 
+namespace ZXCBTools {
+
 QPixmap convertFromNative(xcb_image_t *xcbImage)
 {
     QImage::Format format = QImage::Format_Invalid;
@@ -21,13 +23,13 @@ QPixmap convertFromNative(xcb_image_t *xcbImage)
     case 1:
         format = QImage::Format_MonoLSB;
         break;
-    case 16:
+    case 16: // NOLINT
         format = QImage::Format_RGB16;
         break;
-    case 24:
+    case 24: // NOLINT
         format = QImage::Format_RGB32;
         break;
-    case 30:
+    case 30: // NOLINT
         // Qt doesn't have a matching image format. We need to convert manually
         pixels = reinterpret_cast<quint32 *>(xcbImage->data);
         for (uint i = 0; i < (xcbImage->size / 4); i++) {
@@ -39,7 +41,7 @@ QPixmap convertFromNative(xcb_image_t *xcbImage)
         }
         // fall through, Qt format is still Format_ARGB32_Premultiplied
         [[clang::fallthrough]];
-    case 32:
+    case 32: // NOLINT
         format = QImage::Format_ARGB32_Premultiplied;
         break;
     default:
@@ -108,7 +110,7 @@ QPixmap getWindowPixmap(xcb_window_t window, bool blendPointer)
                                 geomReply->y,
                                 geomReply->width,
                                 geomReply->height,
-                                ~0,
+                                ~0U,
                                 XCB_IMAGE_FORMAT_Z_PIXMAP
                                 );
 
@@ -243,7 +245,7 @@ void getWindowsRecursive( QVector<QRect> &windows, xcb_window_t w, int rx, int r
         if (tree) {
             xcb_window_t* child = xcb_query_tree_children(tree);
             for (unsigned int i=0;i<tree->children_len;i++)
-                getWindowsRecursive(windows, child[i], x, y, depth +1);
+                getWindowsRecursive(windows, child[i], x, y, depth +1); // NOLINT
             free(tree); // NOLINT
         }
     }
@@ -256,7 +258,7 @@ void getWindowsRecursive( QVector<QRect> &windows, xcb_window_t w, int rx, int r
 
 xcb_window_t findRealWindow( xcb_window_t w, int depth )
 {
-    static char wm_state_s[] = "WM_STATE";
+    const char *wm_state_s = "WM_STATE";
 
     xcb_connection_t* c = QX11Info::connection();
 
@@ -268,7 +270,7 @@ xcb_window_t findRealWindow( xcb_window_t w, int depth )
     xcb_intern_atom_reply_t* wm_state = xcb_intern_atom_reply(c, ac, nullptr);
 
     if (!wm_state) {
-        qWarning("Unable to allocate xcb atom");
+        qWarning() << "Unable to allocate xcb atom";
         return 0;
     }
 
@@ -290,7 +292,7 @@ xcb_window_t findRealWindow( xcb_window_t w, int depth )
     if (tree) {
         xcb_window_t* child = xcb_query_tree_children(tree);
         for (unsigned int i=0;i<tree->children_len;i++)
-            ret = findRealWindow(child[i], depth +1 );
+            ret = findRealWindow(child[i], depth +1 ); // NOLINT
         free(tree); // NOLINT
     }
 
@@ -320,6 +322,8 @@ xcb_window_t windowUnderCursor( bool includeDecorations )
     }
 
     return child;
+}
+
 }
 
 #endif

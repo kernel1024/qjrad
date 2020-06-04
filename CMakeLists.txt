@@ -66,9 +66,7 @@ set(SOURCES
     kdictionary.cpp
     kanjimodel.cpp
     settingsdlg.cpp
-    miscutils.cpp
     global.cpp
-    loadingdlg.cpp
     dbusdict.cpp
     regiongrabber.cpp
     xcbtools.cpp
@@ -77,12 +75,11 @@ set(SOURCES
 set(SOURCES_UI
     mainwindow.ui
     settingsdlg.ui
-    loadingdlg.ui
 )
 
 qt5_wrap_ui(HEADERS_UI ${SOURCES_UI})
 qt5_add_resources(RESOURCES qjrad.qrc)
-qt5_add_dbus_adaptor(DBUS_ADAPTORS org.qjrad.dictionary.xml dbusdict.h QKDBusDict dictionary_adaptor)
+qt5_add_dbus_adaptor(DBUS_ADAPTORS org.qjrad.dictionary.xml dbusdict.h ZKanjiDBusDict dictionary_adaptor)
 
 set(LIBS
     -lz -ltbb

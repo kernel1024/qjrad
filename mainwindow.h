@@ -29,7 +29,7 @@ Q_SIGNALS:
     void keyPressed(int key);
 };
 
-class MainWindow : public QMainWindow
+class ZMainWindow : public QMainWindow
 {
     Q_OBJECT
 
@@ -37,8 +37,8 @@ public:
     QString foundKanji;
     QTextBrowser* dictView { nullptr }; // TODO: remove?
 
-    explicit MainWindow(QWidget *parent = 0);
-    ~MainWindow() override;
+    explicit ZMainWindow(QWidget *parent = 0);
+    ~ZMainWindow() override;
 
     void renderRadicalsButtons();
     void renderKanaButtons();
@@ -57,13 +57,12 @@ private:
     bool forceFocusToEdit;
     CAuxDictKeyFilter *keyFilter;
     QRect lastGrabbedRegion;
-    QKDictionary dict;
+    ZKanjiDictionary dict;
 
     QString lastWordFinderReq;
     bool fuzzySearch;
 
     void insertOneWidget(QWidget *w, int &row, int &clmn, bool isKana);
-    void closeEvent(QCloseEvent * event) override;
 
     void showTranslationFor(const QString &word) const;
     void restoreWindow();

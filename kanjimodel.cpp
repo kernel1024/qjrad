@@ -1,5 +1,5 @@
 #include "kanjimodel.h"
-#include "miscutils.h"
+#include "global.h"
 #include <QApplication>
 #include <QPainter>
 #include <QPen>
@@ -13,17 +13,14 @@ const int kanjiWidthDivider = 10;
 const int rareKanjiMinimumGrade = 8;
 }
 
-QKanjiModel::QKanjiModel(QObject *parent, const QString &KanjiList, const QFont &KanjiFont,
-                         const QFont &MarkFont) :
+ZKanjiModel::ZKanjiModel(QObject *parent, const QString &KanjiList) :
     QAbstractListModel(parent)
 {
     kanjiList = KanjiList;
-    kanjiFont = KanjiFont;
-    mainWnd = qobject_cast<MainWindow *>(parent);
-    markFont = MarkFont;
+    mainWnd = qobject_cast<ZMainWindow *>(parent);
 }
 
-Qt::ItemFlags QKanjiModel::flags(const QModelIndex &index) const
+Qt::ItemFlags ZKanjiModel::flags(const QModelIndex &index) const
 {
     if (index.isValid()) {
         if (index.row()<kanjiList.length()) {
@@ -36,7 +33,7 @@ Qt::ItemFlags QKanjiModel::flags(const QModelIndex &index) const
     return (Qt::ItemIsSelectable | Qt::ItemIsEnabled);
 }
 
-QVariant QKanjiModel::data(const QModelIndex &index, int role) const
+QVariant ZKanjiModel::data(const QModelIndex &index, int role) const
 {
     if (!index.isValid()) return QVariant();
 
@@ -46,19 +43,19 @@ QVariant QKanjiModel::data(const QModelIndex &index, int role) const
     if (role == Qt::DecorationRole) {
         QColor background = QApplication::palette("QListView").color(QPalette::Base);
         QColor kanjiColor = QApplication::palette("QListView").color(QPalette::Text);
-        QColor rareKanjiColor = middleColor(background,kanjiColor,CDefaults::foundKanjiColorBiasMultiplier);
+        QColor rareKanjiColor = ZGlobal::middleColor(background,kanjiColor,CDefaults::foundKanjiColorBiasMultiplier);
 
-        QFontMetrics fm(kanjiFont);
+        QFontMetrics fm(zF->fontResults());
         int sz = CDefaults::kanjiWidthMultiplier * fm.horizontalAdvance(CDefaults::biggestRadical)
                  / CDefaults::kanjiWidthDivider;
         QPixmap px(sz,sz);
         QPainter pn(&px);
-        pn.setFont(kanjiFont);
+        pn.setFont(zF->fontResults());
         pn.fillRect(0,0,sz,sz,background);
 
         if (!isRegularKanji(k)) { // this is a unselectable mark, not kanji
             int v = k.unicode() - CDefaults::enclosedNumericsStart;
-            pn.setFont(markFont);
+            pn.setFont(zF->fontLabels());
             pn.setPen(QPen(rareKanjiColor));
             QVector<QLine> rrct;
             createHxBox(rrct,sz,3);
@@ -78,13 +75,13 @@ QVariant QKanjiModel::data(const QModelIndex &index, int role) const
     return QVariant();
 }
 
-int QKanjiModel::rowCount(const QModelIndex & parent) const
+int ZKanjiModel::rowCount(const QModelIndex & parent) const
 {
     Q_UNUSED(parent)
     return kanjiList.length();
 }
 
-void QKanjiModel::createHxBox(QVector<QLine> &rrct, int sz, int hv) const
+void ZKanjiModel::createHxBox(QVector<QLine> &rrct, int sz, int hv) const
 {
     rrct.clear();
     rrct << QLine(hv,0,sz-1-hv,0)       << QLine(sz-1-hv,0,sz-1,hv);
@@ -93,7 +90,7 @@ void QKanjiModel::createHxBox(QVector<QLine> &rrct, int sz, int hv) const
     rrct << QLine(0,sz-1-hv,0,hv)       << QLine(0,hv,hv,0);
 }
 
-bool QKanjiModel::isRegularKanji(QChar k)
+bool ZKanjiModel::isRegularKanji(QChar k)
 {
     return (!((k.unicode()>=CDefaults::enclosedNumericsStart) &&
               (k.unicode()<=CDefaults::enclosedNumericsEnd))); // exclude unicode enclosed numerics set

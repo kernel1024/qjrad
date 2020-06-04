@@ -4,18 +4,18 @@
 #include "dbusdict.h"
 #include "mainwindow.h"
 
-QKDBusDict::QKDBusDict(QObject *parent, ZDict::ZDictController *dictManager) :
+ZKanjiDBusDict::ZKanjiDBusDict(QObject *parent, ZDict::ZDictController *dictManager) :
     QObject(parent), m_wnd(nullptr)
 {
     m_dictManager = dictManager;
 }
 
-void QKDBusDict::setMainWindow(MainWindow *wnd)
+void ZKanjiDBusDict::setMainWindow(ZMainWindow *wnd)
 {
     m_wnd = wnd;
 }
 
-void QKDBusDict::findWordTranslation(const QString &text)
+void ZKanjiDBusDict::findWordTranslation(const QString &text)
 {
     QThread *th = QThread::create([this,text]{
         QString res = m_dictManager->loadArticle(text);
@@ -25,7 +25,7 @@ void QKDBusDict::findWordTranslation(const QString &text)
     th->start();
 }
 
-void QKDBusDict::showDictionaryWindow(const QString &text)
+void ZKanjiDBusDict::showDictionaryWindow(const QString &text)
 {
     m_wnd->showNormal();
     m_wnd->raise();

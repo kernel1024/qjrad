@@ -8,8 +8,9 @@
 #include <QDomDocument>
 #include <QDomElement>
 #include "../kdictionary.h"
+#include "../qsl.h"
 
-QHash<QChar,QKanjiInfo> kanjiInfo;
+QHash<QChar,ZKanjiInfo> kanjiInfo;
 QHash<QChar,QStringList> kanjiParts;
 QHash<QChar,int> kanjiStrokes;
 QHash<QChar,int> kanjiGrade;
@@ -139,7 +140,7 @@ bool parseKanjiDict(const QString& kradfilex, const QString& kanjidict, QTextStr
         QFile res(QSL("k%1.bin").arg(li.unicode()));
         if (res.open(QIODevice::WriteOnly)) {
             QDataStream rout(&res);
-            QKanjiInfo ki = QKanjiInfo(li,parts,on,kun,mean);
+            ZKanjiInfo ki = ZKanjiInfo(li,parts,on,kun,mean);
             rout << ki;
             res.close();
             qrc << QSL("<file alias=\"kanji-%1\">k%1.bin</file>").arg(li.unicode()) << endl;
@@ -152,9 +153,9 @@ bool parseKanjiDict(const QString& kradfilex, const QString& kanjidict, QTextStr
 
 int main(int argc, char *argv[])
 {
-    qRegisterMetaType<QKRadItem>("QKRadItem");
-    qRegisterMetaType<QKanjiInfo>("QKanjiInfo");
-    qRegisterMetaTypeStreamOperators<QKanjiInfo>("QKanjiInfo");
+    qRegisterMetaType<ZKanjiRadicalItem>("QKRadItem");
+    qRegisterMetaType<ZKanjiInfo>("QKanjiInfo");
+    qRegisterMetaTypeStreamOperators<ZKanjiInfo>("QKanjiInfo");
     QCoreApplication a(argc, argv);
 
     if (QCoreApplication::arguments().count()!=3) {

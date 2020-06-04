@@ -31,15 +31,15 @@ class QPaintEvent;
 class QResizeEvent;
 class QMouseEvent;
 
-class RegionGrabber : public QWidget
+class ZRegionGrabber : public QWidget
 {
     Q_OBJECT
 
     enum MaskType { StrokeMask, FillMask };
 
 public:
-    RegionGrabber(QWidget *parent, const QRect &startSelection);
-    ~RegionGrabber() override;
+    ZRegionGrabber(QWidget *parent, const QRect &startSelection);
+    ~ZRegionGrabber() override;
 
 protected Q_SLOTS:
     void init();

@@ -4,19 +4,19 @@
 #include <QObject>
 #include "zdict/zdictcontroller.h"
 
-class MainWindow;
+class ZMainWindow;
 
-class QKDBusDict : public QObject
+class ZKanjiDBusDict : public QObject
 {
     Q_OBJECT
     Q_CLASSINFO("D-Bus Interface", "org.qjrad.dictionary")
 private:
     ZDict::ZDictController* m_dictManager;
-    MainWindow* m_wnd;
+    ZMainWindow* m_wnd;
 
 public:
-    explicit QKDBusDict(QObject *parent, ZDict::ZDictController* dictManager);
-    void setMainWindow(MainWindow* wnd);
+    explicit ZKanjiDBusDict(QObject *parent, ZDict::ZDictController* dictManager);
+    void setMainWindow(ZMainWindow* wnd);
 
 Q_SIGNALS:
     Q_SCRIPTABLE void gotWordTranslation(const QString& html);
