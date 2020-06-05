@@ -26,6 +26,7 @@ const int screenCaptureDelay = 200;
 const int splittersEnforcingDelay = 1000;
 const int statusBarMessageMinWidth = 150;
 const int radicalsColorBiasMultiplier = 25;
+const int dictManagerStatusMessageTimeout = 5000;
 const QSize windowSize = QSize(200,200);
 const QPoint windowPos = QPoint(20,20);
 }
@@ -88,6 +89,9 @@ ZMainWindow::ZMainWindow(QWidget *parent) :
     connect(zF->dictManager,&ZDict::ZDictController::articleComplete,
             this,&ZMainWindow::articleReady,Qt::QueuedConnection);
     connect(this,&ZMainWindow::stopDictionaryWork,zF->dictManager,&ZDict::ZDictController::cancelActiveWork);
+    connect(zF->dictManager,&ZDict::ZDictController::dictionariesLoaded,this,[this](const QString& message){
+        statusBar()->showMessage(message,CDefaults::dictManagerStatusMessageTimeout);
+    },Qt::QueuedConnection);
 
     connect(dictView, &QTextBrowser::textChanged,this,&ZMainWindow::dictLoadFinished);
 
