@@ -559,7 +559,7 @@ void ZMainWindow::regionGrabbed(const QPixmap &pic)
         if (zF->isOCRReady() && pic.width()>minOCRPicSize && pic.height()>minOCRPicSize) {
             QImage cpx = pic.toImage();
             QString s = zF->processImageWithOCR(cpx);
-            QStringList sl = s.split('\n',QString::SkipEmptyParts);
+            QStringList sl = s.split('\n',Qt::SkipEmptyParts);
             int maxlen = 0;
             for (const auto &i : qAsConst(sl)) {
                 if (i.length()>maxlen)
