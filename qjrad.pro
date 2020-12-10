@@ -1,4 +1,4 @@
-QT += core gui widgets dbus
+QT += core gui widgets dbus xml
 
 TEMPLATE = app
 
