@@ -19,6 +19,7 @@ ZSettingsDialog::ZSettingsDialog(QWidget *parent) :
     connect(ui->btnAddPath,&QPushButton::clicked,this,&ZSettingsDialog::addDir);
     connect(ui->btnDelPath,&QPushButton::clicked,this,&ZSettingsDialog::delDir);
     connect(ui->btnOCRDatapath,&QPushButton::clicked,this,&ZSettingsDialog::ocrDatapath);
+    connect(ui->btnRebuildKanjiDict,&QPushButton::clicked,this,&ZSettingsDialog::rebuildKanjiDict);
 
     updateFonts();
 
@@ -136,6 +137,15 @@ void ZSettingsDialog::ocrDatapath()
         ui->editOCRDatapath->setText(datapath);
     updateOCRLanguages();
 #endif
+}
+
+void ZSettingsDialog::rebuildKanjiDict()
+{
+    if (QMessageBox::question(this,QGuiApplication::applicationDisplayName(),
+                              tr("Remove cached Kanji dictionary, close application and rebuild?")
+                              ) == QMessageBox::Yes) {
+        Q_EMIT cleanupDictionaries();
+    }
 }
 
 void ZSettingsDialog::changeFont()

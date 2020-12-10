@@ -27,6 +27,11 @@ private Q_SLOTS:
     void addDir();
     void delDir();
     void ocrDatapath();
+    void rebuildKanjiDict();
+
+Q_SIGNALS:
+    void cleanupDictionaries();
+
 };
 
 #endif // SETTINGSDLG_H

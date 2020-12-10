@@ -27,10 +27,8 @@
 #include <QPainter>
 #include <QMouseEvent>
 #include <QApplication>
-#include <QDesktopWidget>
 #include <QToolTip>
 #include <QTimer>
-#include <QX11Info>
 
 #include "xcbtools.h"
 
@@ -56,7 +54,7 @@ ZRegionGrabber::~ZRegionGrabber() = default;
 
 void ZRegionGrabber::init()
 {
-    pixmap = ZXCBTools::getWindowPixmap( QX11Info::appRootWindow(), blendPointer );
+    pixmap = ZXCBTools::getWindowPixmap( ZXCBTools::appRootWindow(), blendPointer );
     resize( pixmap.size() );
     move( 0, 0 );
     setCursor( Qt::CrossCursor );

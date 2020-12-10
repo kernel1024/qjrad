@@ -1,7 +1,0 @@
-#!/bin/sh
-rm -rf ./out
-mkdir out
-cd out
-../../kanjiconv ../../data/kradfilex.utf8 ../../data/kanjidic2.xml > cnv-out 2>&1
-rcc kanjidic.qrc -binary -o ../../kanjidic.rcc
-rm *.bin

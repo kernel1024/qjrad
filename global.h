@@ -36,7 +36,7 @@ class ZGlobal : public QObject
 {
     Q_OBJECT
 public:
-    ZDict::ZDictController* dictManager { nullptr }; // TODO: replace with QScopedPointer
+    QPointer<ZDict::ZDictController> dictManager;
     ZKanjiDBusDict* dbusDict { nullptr };
 
     QFont fontResults() const;
@@ -47,6 +47,7 @@ public:
     ~ZGlobal() override;
     static ZGlobal* instance();
     void initialize();
+    void deferredQuit();
 
     QStringList getDictPaths();
     void loadDictionaries();
@@ -60,6 +61,8 @@ public:
     QString processImageWithOCR(const QImage& image);
     bool isOCRReady() const;
 
+    static qint64 writeData(QFile* file, const QVariant &data);
+    static QVariant readData(QFile* file, const QVariant &defaultValue = QVariant());
 private:
     tesseract::TessBaseAPI* m_ocr { nullptr };
     static PIX* Image2PIX(const QImage& qImage);

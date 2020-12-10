@@ -35,7 +35,6 @@ class ZMainWindow : public QMainWindow
 
 public:
     QString foundKanji;
-    QTextBrowser* dictView { nullptr }; // TODO: remove?
 
     explicit ZMainWindow(QWidget *parent = 0);
     ~ZMainWindow() override;
@@ -70,23 +69,30 @@ private:
     void updateResultsCountLabel();
 
 public Q_SLOTS:
-    // window geometry and misc
+    // Window geometry
     void centerWindow();
     void updateSplitters();
-    // event handlers
+
+    // GUI handlers
+    void settingsDlg();
+    void setupDictionaries();
+
+    // Kanji dictionary / table
     void resetRadicals();
     void updateKana(bool checked);
     void radicalPressed(bool checked);
     void kanaPressed(bool checked);
-    void settingsDlg();
     void opacityList();
     void kanjiClicked(const QModelIndex & index);
     void kanjiAdd(const QModelIndex & index);
     void setScratchPadText(const QString & text);
+
+    // OCR
     void screenCapture();
     void regionGrabbed(const QPixmap &pic);
     void regionUpdated(const QRect &region);
 
+    // Word dictionary
     void updateMatchResults(const QStringList &words);
     void translateInputChanged(const QString &newValues);
     void translateInputFinished();

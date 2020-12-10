@@ -57,12 +57,25 @@ void ZGlobal::initialize()
     initializeOCR();
 #endif
 
-    qRegisterMetaType<ZKanjiRadicalItem>("QKRadItem");
-    qRegisterMetaType<ZKanjiInfo>("QKanjiInfo");
+    qRegisterMetaType<ZKanjiRadicalItem>("ZKanjiRadicalItem");
+#if QT_VERSION >= QT_VERSION_CHECK(6,0,0)
+    qRegisterMetaType<ZKanjiInfo>("ZKanjiInfo");
+    qRegisterMetaType<ZKanjiIndex>("ZKanjiIndex");
+    qRegisterMetaType<ZKanjiInfoHash>("ZKanjiInfoHash");
+#else
+    qRegisterMetaTypeStreamOperators<ZKanjiInfo>("ZKanjiInfo");
+    qRegisterMetaTypeStreamOperators<ZKanjiIndex>("ZKanjiIndex");
+    qRegisterMetaTypeStreamOperators<ZKanjiInfoHash>("ZKanjiInfoHash");
+#endif
 
     QGuiApplication::setApplicationDisplayName(QSL("QJRad - Kanji Lookup Tool"));
     QCoreApplication::setOrganizationName(QSL("kernel1024"));
     QCoreApplication::setApplicationName(QSL("qjrad"));
+}
+
+void ZGlobal::deferredQuit()
+{
+    QMetaObject::invokeMethod(QCoreApplication::instance(),&QCoreApplication::quit,Qt::QueuedConnection);
 }
 
 QStringList ZGlobal::getDictPaths()
@@ -142,6 +155,33 @@ QString ZGlobal::makeSimpleHtml(const QString &title, const QString &content)
     res.append(QSL("<title>%1</title></head>").arg(title));
     res.append(QSL("<body>%1</body></html>").arg(cnt.toHtmlEscaped()));
     return res;
+}
+
+qint64 ZGlobal::writeData(QFile* file, const QVariant &data)
+{
+    qint64 pos = file->pos();
+    QDataStream bigdata(file);
+    bigdata.setVersion(QDataStream::Qt_5_10);
+    bigdata << data;
+    return (file->pos() - pos);
+}
+
+QVariant ZGlobal::readData(QFile* file, const QVariant &defaultValue)
+{
+    QVariant res;
+    QDataStream bigdata(file);
+    bigdata.setVersion(QDataStream::Qt_5_10);
+    bigdata >> res;
+
+    if (!defaultValue.isNull() && defaultValue.isValid()) {
+        if (defaultValue.userType() == res.userType())
+            return res;
+    }
+
+    if (res.isValid())
+        return res;
+
+    return defaultValue;
 }
 
 #ifdef WITH_OCR

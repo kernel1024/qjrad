@@ -297,6 +297,13 @@
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
+      <widget class="QPushButton" name="btnRebuildKanjiDict">
+       <property name="text">
+        <string>Rebuild Kanji dictionary</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <spacer name="horizontalSpacer">
        <property name="orientation">
         <enum>Qt::Horizontal</enum>
@@ -343,6 +350,7 @@
   <tabstop>editOCRDatapath</tabstop>
   <tabstop>btnOCRDatapath</tabstop>
   <tabstop>comboOCRLanguage</tabstop>
+  <tabstop>btnRebuildKanjiDict</tabstop>
   <tabstop>OKBtn</tabstop>
   <tabstop>CancelBtn</tabstop>
  </tabstops>

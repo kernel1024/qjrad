@@ -1,6 +1,5 @@
 #include <QMessageBox>
 #include <QLineEdit>
-#include <QDesktopWidget>
 #include <QUrl>
 #include <QScrollBar>
 #include <QMenu>
@@ -41,15 +40,9 @@ ZMainWindow::ZMainWindow(QWidget *parent) :
     zF->dbusDict->setMainWindow(this);
 
     forceFocusToEdit = false;
-    dictView = ui->wdictViewer;
 
     infoKanjiTemplate = ui->infoKanji->toHtml();
     ui->infoKanji->clear();
-
-    if (!dict.loadDictionaries()) {
-        QMessageBox::critical(this,QGuiApplication::applicationDisplayName(),
-                              tr("Cannot load main dictionaries\nError: %1").arg(dict.errorString));
-    }
 
     QIcon appicon;
     const QVector<int> iconSizes({22,32,48,64,128});
@@ -93,7 +86,7 @@ ZMainWindow::ZMainWindow(QWidget *parent) :
         statusBar()->showMessage(message,CDefaults::dictManagerStatusMessageTimeout);
     },Qt::QueuedConnection);
 
-    connect(dictView, &QTextBrowser::textChanged,this,&ZMainWindow::dictLoadFinished);
+    connect(ui->wdictViewer, &QTextBrowser::textChanged,this,&ZMainWindow::dictLoadFinished);
 
     keyFilter = new CAuxDictKeyFilter(this);
     ui->scratchPad->installEventFilter(keyFilter);
@@ -108,19 +101,19 @@ ZMainWindow::ZMainWindow(QWidget *parent) :
     ui->scratchPad->setFont(zF->fontResults());
     ui->dictWords->setFont(zF->fontBtn());
 
-    allowLookup = false;
-    renderRadicalsButtons();
-    renderKanaButtons();
-    allowLookup = true;
-
     centerWindow();
 
-    dictView->clear();
+    ui->wdictViewer->clear();
     lastWordFinderReq.clear();
     fuzzySearch = false;
+
     zF->loadDictionaries();
 
-    QTimer::singleShot(CDefaults::splittersEnforcingDelay,this,&ZMainWindow::updateSplitters);
+    QTimer::singleShot(CDefaults::splittersEnforcingDelay,this,[this](){
+        setupDictionaries();
+        updateSplitters();
+    });
+
 #ifndef WITH_OCR
     ui->btnCapture->setEnabled(false);
     ui->btnCapture->hide();
@@ -130,6 +123,26 @@ ZMainWindow::ZMainWindow(QWidget *parent) :
 ZMainWindow::~ZMainWindow()
 {
     delete ui;
+}
+
+void ZMainWindow::setupDictionaries()
+{
+    bool kdictRes = dict.loadDictionaries(this);
+    if (!kdictRes) {
+        if (dict.getErrorString().isEmpty()) {
+            zF->deferredQuit();
+            return;
+        }
+        QMessageBox::critical(this,QGuiApplication::applicationDisplayName(),
+                              tr("Cannot load main dictionaries\nError: %1").arg(dict.getErrorString()));
+    }
+
+    if (kdictRes) {
+        allowLookup = false;
+        renderRadicalsButtons();
+        renderKanaButtons();
+        allowLookup = true;
+    }
 }
 
 void ZMainWindow::centerWindow()
@@ -605,6 +618,7 @@ void ZMainWindow::regionUpdated(const QRect &region)
 void ZMainWindow::settingsDlg()
 {
     ZSettingsDialog dlg(this);
+    connect(&dlg,&ZSettingsDialog::cleanupDictionaries,&dict,&ZKanjiDictionary::cleanupDictionaries);
     dlg.loadSettings();
     if (dlg.exec() == QDialog::Accepted) {
         dlg.saveSettings();
@@ -670,7 +684,7 @@ void ZMainWindow::dictLoadFinished()
 void ZMainWindow::articleReady(const QString &text) const
 {
     if (!text.isEmpty())
-        dictView->setHtml(text);
+        ui->wdictViewer->setHtml(text);
 }
 
 void ZMainWindow::articleLinkClicked(const QUrl &url)
@@ -793,7 +807,7 @@ void ZMainWindow::translateInputFinished()
 
 void ZMainWindow::showTranslationFor(const QString &word) const
 {
-    dictView->clear();
+    ui->wdictViewer->clear();
     zF->dictManager->loadArticleAsync(word);
 }
 

@@ -18,6 +18,7 @@ ui_*.h
 qrc_*.cpp
 Debug/
 Release/
+build-*
 *.log
 *.autosave
 .*.stash
@@ -27,19 +28,6 @@ Release/
 =======
 *.pro.user*
 *~
-
-# CMake specific
-CMakeCache.txt
-CMakeLists.txt.user
-CMakeFiles
-CMakeScripts
-Makefile
-cmake_install.cmake
-*_autogen
-*.depends
-.cmake
-CMakeLists.txt.user.*
-qtcsettings*
 
 # Project specific
 qjrad

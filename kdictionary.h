@@ -2,12 +2,16 @@
 #define KDICTIONARY_H
 
 #include <QObject>
+#include <QDir>
 #include <QStringList>
 #include <QHash>
 #include <QList>
 #include <QDataStream>
 #include <QChar>
 #include <QString>
+
+using ZKanjiIndex = QHash<unsigned int,qint64>;
+using ZKanjiInfoHash = QHash<QChar,int>;
 
 class ZKanjiRadicalItem
 {
@@ -50,23 +54,40 @@ public:
     bool isEmpty() const;
 };
 
+Q_DECLARE_METATYPE(ZKanjiInfo)
+
 class ZKanjiDictionary : public QObject
 {
     Q_OBJECT
-public:
-    QList<ZKanjiRadicalItem> radicalsLookup;
-    QHash<QChar,QStringList> kanjiParts;
-    QHash<QChar,int> kanjiStrokes;
-    QHash<QChar,int> kanjiGrade;
+
+private:
+    QDir dataPath;
 
     QString errorString;
 
+    bool parseKanjiDict(const QString& xmlDictFileName);
+    bool setupDictionaryData(QWidget *mainWindow);
+    void deleteDictionaryData();
+    bool isDictionaryDataValid();
+
+public:
+    QList<ZKanjiRadicalItem> radicalsLookup;
+    QHash<QChar,QStringList> kanjiParts;
+    ZKanjiInfoHash kanjiStrokes;
+    ZKanjiInfoHash kanjiGrade;
+    ZKanjiIndex kanjiIndex;
+    // TODO: move this indexes to private, also move some kanji search logic from ZMainWindow to separate class
+
     explicit ZKanjiDictionary(QObject *parent = 0);
 
-    bool loadDictionaries();
-    bool loadKanjiDict();
+    bool loadDictionaries(QWidget *mainWindow);
     QString sortKanji(const QString &src);
     ZKanjiInfo getKanjiInfo(QChar kanji);
+
+    QString getErrorString() const;
+
+public Q_SLOTS:
+    void cleanupDictionaries();
 
 };
 
