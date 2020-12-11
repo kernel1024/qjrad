@@ -13,24 +13,14 @@
 using ZKanjiIndex = QHash<unsigned int,qint64>;
 using ZKanjiInfoHash = QHash<QChar,int>;
 
-class ZKanjiRadicalItem
-{
+class ZKanjiRadicalItem {
 public:
-    QChar radical;
     int strokes { 0 };
-    QString jisCode;
     QString kanji;
     ZKanjiRadicalItem() = default;
     ~ZKanjiRadicalItem() = default;
-    ZKanjiRadicalItem(const ZKanjiRadicalItem &other) = default;
-    ZKanjiRadicalItem(QChar aRadical);
-    ZKanjiRadicalItem(QChar aRadical, int aStrokes);
-    ZKanjiRadicalItem(QChar aRadical, int aStrokes, const QString &aJisCode, const QString &aKanji);
+    ZKanjiRadicalItem(int aStrokes, const QString& aKanji);
     ZKanjiRadicalItem &operator=(const ZKanjiRadicalItem &other) = default;
-    bool operator==(const ZKanjiRadicalItem &s) const;
-    bool operator!=(const ZKanjiRadicalItem &s) const;
-    bool operator <(const ZKanjiRadicalItem &ref) const;
-    bool operator >(const ZKanjiRadicalItem &ref) const;
 };
 
 class ZKanjiInfo
@@ -39,15 +29,14 @@ class ZKanjiInfo
     friend QDataStream &operator>>(QDataStream &in, ZKanjiInfo &obj);
 public:
     QChar kanji;
-    QStringList parts;
     QStringList onReading;
     QStringList kunReading;
     QStringList meaning;
     ZKanjiInfo() = default;
     ~ZKanjiInfo() = default;
     ZKanjiInfo(const ZKanjiInfo &other) = default;
-    ZKanjiInfo(QChar aKanji, const QStringList &aParts,
-               const QStringList &aOnReading, const QStringList &aKunReading, const QStringList &aMeaning);
+    ZKanjiInfo(QChar aKanji, const QStringList &aOnReading, const QStringList &aKunReading,
+               const QStringList &aMeaning);
     ZKanjiInfo &operator=(const ZKanjiInfo &other) = default;
     bool operator==(const ZKanjiInfo &s) const;
     bool operator!=(const ZKanjiInfo &s) const;
@@ -61,9 +50,15 @@ class ZKanjiDictionary : public QObject
     Q_OBJECT
 
 private:
-    QDir dataPath;
+    QList<QPair<QChar,int> > m_radicalsList;
+    QHash<QChar,ZKanjiRadicalItem> m_radicalsLookup;
+    QHash<QChar,QString> m_kanjiParts;
+    ZKanjiInfoHash m_kanjiStrokes;
+    ZKanjiInfoHash m_kanjiGrade;
+    ZKanjiIndex m_kanjiIndex;
 
-    QString errorString;
+    QDir m_dataPath;
+    QString m_errorString;
 
     bool parseKanjiDict(QWidget *mainWindow, const QString& xmlDictFileName);
     bool setupDictionaryData(QWidget *mainWindow);
@@ -71,20 +66,19 @@ private:
     bool isDictionaryDataValid();
 
 public:
-    QList<ZKanjiRadicalItem> radicalsLookup;
-    QHash<QChar,QStringList> kanjiParts;
-    ZKanjiInfoHash kanjiStrokes;
-    ZKanjiInfoHash kanjiGrade;
-    ZKanjiIndex kanjiIndex;
-    // TODO: move this indexes to private, also move some kanji search logic from ZMainWindow to separate class
-
     explicit ZKanjiDictionary(QObject *parent = 0);
 
     bool loadDictionaries(QWidget *mainWindow);
+    QString getErrorString() const;
+
     QString sortKanji(const QString &src);
     ZKanjiInfo getKanjiInfo(QChar kanji);
-
-    QString getErrorString() const;
+    int getKanjiGrade(const QChar &kanji) const;
+    int getKanjiStrokes(const QChar &kanji) const;
+    const QList<QPair<QChar,int> > &getAllRadicals() const;
+    ZKanjiRadicalItem getRadicalInfo(const QChar &radical) const;
+    QString lookupRadicals(const QString &radicals) const;
+    QString getKanjiParts(const QChar &kanji) const;
 
 public Q_SLOTS:
     void cleanupDictionaries();

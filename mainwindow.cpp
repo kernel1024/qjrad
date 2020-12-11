@@ -36,6 +36,8 @@ ZMainWindow::ZMainWindow(QWidget *parent) :
     ui->setupUi(this);
     setWindowTitle(QGuiApplication::applicationDisplayName());
 
+    dict.reset(new ZKanjiDictionary(this));
+
     zF->dbusDict->setMainWindow(this);
 
     infoKanjiTemplate = ui->infoKanji->toHtml();
@@ -140,14 +142,14 @@ void ZMainWindow::restoreWindow()
 
 void ZMainWindow::setupDictionaries()
 {
-    bool kdictRes = dict.loadDictionaries(this);
+    bool kdictRes = dict->loadDictionaries(this);
     if (!kdictRes) {
-        if (dict.getErrorString().isEmpty()) {
+        if (dict->getErrorString().isEmpty()) {
             zF->deferredQuit();
             return;
         }
         QMessageBox::critical(this,QGuiApplication::applicationDisplayName(),
-                              tr("Cannot load main dictionaries\nError: %1").arg(dict.getErrorString()));
+                              tr("Cannot load main dictionaries\nError: %1").arg(dict->getErrorString()));
     }
 
     if (kdictRes) {
@@ -232,14 +234,6 @@ QList<int> ZMainWindow::getDictSplittersSize()
     return ui->splitterMain->sizes();
 }
 
-int ZMainWindow::getKanjiGrade(QChar kanji) const
-{
-    if (dict.kanjiGrade.contains(kanji))
-        return dict.kanjiGrade.value(kanji);
-
-    return 0;
-}
-
 void ZMainWindow::renderRadicalsButtons()
 {
     int btnWidth = -1;
@@ -248,30 +242,28 @@ void ZMainWindow::renderRadicalsButtons()
 
     ui->gridRad->setHorizontalSpacing(2);
     ui->gridRad->setVerticalSpacing(2);
-    int rmark=0;
-    int row=0;
-    int clmn=0;
+    int rmark = 0;
+    int row = 0;
+    int clmn = 0;
 
     QWidget *w = nullptr;
-    for (int i=0;i<dict.radicalsLookup.count();i++) {
-        ZKanjiRadicalItem ri = dict.radicalsLookup.at(i);
+    for (const auto &rad : dict->getAllRadicals()) {
         w = nullptr;
-        if (rmark!=ri.strokes) {
+        if (rmark != rad.second) {
             // insert label
-            auto *rl = new QLabel(tr("%1").arg(ri.strokes),ui->frameRad);
+            auto *rl = new QLabel(tr("%1").arg(rad.second),ui->frameRad);
             rl->setAlignment(Qt::AlignCenter);
             rl->setFont(zF->fontLabels());
             rl->setFrameShape(QFrame::Box);
             w = rl;
-            rmark=ri.strokes;
+            rmark = rad.second;
             insertOneWidget(w,row,clmn,false);
         }
         // insert button
-        auto *pb = new QPushButton(ri.radical,ui->frameRad);
+        auto *pb = new QPushButton(rad.first,ui->frameRad);
         pb->setFlat(true);
         pb->setFont(zF->fontBtn());
         pb->setCheckable(true);
-        // qt 4.8 bug with kde color configuration tool. disabled color is still incorrect, use our specific color
         QPalette p = pb->palette();
         p.setBrush(QPalette::Disabled,QPalette::ButtonText,QBrush(
                        ZGlobal::middleColor(QApplication::palette("QPushButton").color(QPalette::Button),
@@ -413,58 +405,32 @@ void ZMainWindow::radicalPressed(bool checked)
             buttonList.append(btn);
     }
 
-    QStringList kanjiList;
-    kanjiList.reserve(buttonList.count());
-
     // get kanji for each selected radical
     int bpcnt = 0;
+    QString selectedRadicals;
+    selectedRadicals.reserve(buttonList.count());
     for (int i=0;i<buttonList.count();i++) {
         QPushButton *pb = buttonList.at(i);
         QChar r = pb->text().at(0);
         pb->setEnabled(true);
         if (pb->isChecked()) {
             bpcnt++;
-            if (!r.isNull()) {
-                int idx = dict.radicalsLookup.indexOf(ZKanjiRadicalItem(r));
-                if (idx>=0) {
-                    kanjiList.append(dict.radicalsLookup.at(idx).kanji);
-                }
-            }
+            if (!r.isNull())
+                selectedRadicals.append(r);
         }
     }
-
-    // leave only kanji present for all selected radicals
-    while (kanjiList.count()>1) {
-        QString fs = kanjiList.at(0);
-        QString ms = kanjiList.takeLast();
-        int i=0;
-        while (i<fs.length()) {
-            if (!ms.contains(fs.at(i))) {
-                fs = fs.remove(i,1);
-            } else {
-                i++;
-            }
-        }
-        if (fs.isEmpty()) {
-            kanjiList.clear();
-            kanjiList << QString();
-            break;
-        }
-        kanjiList.replace(0,fs);
-    }
+    const QString kanjiList = dict->lookupRadicals(selectedRadicals);
 
     if (!kanjiList.isEmpty()) {
         // sort kanji by radicals weight and by unicode weight
-        foundKanji = dict.sortKanji(kanjiList.takeFirst());
+        foundKanji = dict->sortKanji(kanjiList);
         // disable radicals that not appears on found set entirely
         QList<QChar> availableRadicals;
         for (const auto &kj : qAsConst(foundKanji)) {
-            if (dict.kanjiParts.contains(kj)) {
-                const QString krad = dict.kanjiParts.value(kj).join(QString());
-                for (const auto &rad : qAsConst(krad)) {
-                    if (!availableRadicals.contains(rad))
-                        availableRadicals.append(rad);
-                }
+            const QString parts = dict->getKanjiParts(kj);
+            for (const auto &rad : qAsConst(parts)) {
+                if (!availableRadicals.contains(rad))
+                    availableRadicals.append(rad);
             }
         }
         for (int i=0;i<buttonList.count();i++) {
@@ -475,8 +441,8 @@ void ZMainWindow::radicalPressed(bool checked)
         int idx = 0;
         int prevsc = 0;
         while (idx<foundKanji.length()) {
-            if (prevsc!=dict.kanjiStrokes.value(foundKanji.at(idx))) {
-                prevsc = dict.kanjiStrokes.value(foundKanji.at(idx));
+            if (prevsc!=dict->getKanjiStrokes(foundKanji.at(idx))) {
+                prevsc = dict->getKanjiStrokes(foundKanji.at(idx));
                 foundKanji.insert(idx,QChar(CDefaults::enclosedNumericsStart+prevsc)); // use enclosed numerics set from unicode
                 idx++;
             }
@@ -488,7 +454,7 @@ void ZMainWindow::radicalPressed(bool checked)
 
     QItemSelectionModel *m = ui->listKanji->selectionModel();
     QAbstractItemModel *n = ui->listKanji->model();
-    ui->listKanji->setModel(new ZKanjiModel(this,foundKanji));
+    ui->listKanji->setModel(new ZKanjiModel(this,dict.data(),foundKanji));
     m->deleteLater();
     n->deleteLater();
     ui->infoKanji->clear();
@@ -519,22 +485,26 @@ void ZMainWindow::kanjiClicked(const QModelIndex &index)
 {
     if (!index.isValid()) return;
     if (index.row()>=foundKanji.length()) return;
-    QChar k = foundKanji.at(index.row());
+
+    const QChar k = foundKanji.at(index.row());
     if (!ZKanjiModel::isRegularKanji(k)) return;
+
     ui->infoKanji->clear();
-    ZKanjiInfo ki = dict.getKanjiInfo(k);
+    const ZKanjiInfo ki = dict->getKanjiInfo(k);
     if (ki.isEmpty()) {
         ui->infoKanji->setText(tr("Kanji %1 not found in dictionary.").arg(k));
         return;
     }
-    int strokes = dict.kanjiStrokes.value(k);
-    int grade = dict.kanjiGrade.value(k);
+
+    const int strokes = dict->getKanjiStrokes(k);
+    const int grade = dict->getKanjiGrade(k);
+    const QString parts = dict->getKanjiParts(k);
 
     QString msg = QString(infoKanjiTemplate)
                   .arg(zF->fontResults().family())
                   .arg(ki.kanji)
                   .arg(strokes)
-                  .arg(ki.parts.join(QSL(" ")))
+                  .arg(parts)
                   .arg(grade)
                   .arg(ki.onReading.join(QSL(", ")),
                        ki.kunReading.join(QSL(", ")),
@@ -631,7 +601,7 @@ void ZMainWindow::regionUpdated(const QRect &region)
 void ZMainWindow::settingsDlg()
 {
     ZSettingsDialog dlg(this);
-    connect(&dlg,&ZSettingsDialog::cleanupDictionaries,&dict,&ZKanjiDictionary::cleanupDictionaries);
+    connect(&dlg,&ZSettingsDialog::cleanupDictionaries,dict.data(),&ZKanjiDictionary::cleanupDictionaries);
     dlg.loadSettings();
     if (dlg.exec() == QDialog::Accepted) {
         dlg.saveSettings();

@@ -45,17 +45,17 @@ public:
     void clearKanaButtons();
     QList<int> getSplittersSize();
     QList<int> getDictSplittersSize();
-    int getKanjiGrade(QChar kanji) const;
 
 private:
-    Ui::MainWindow *ui;
-    ZKanjiDictionary dict;
-    QObjectList buttons, kanaButtons;
+    Ui::MainWindow *ui { nullptr };
+    QScopedPointer<ZKanjiDictionary,QScopedPointerDeleteLater> dict;
+    QObjectList buttons;
+    QObjectList kanaButtons;
     QString infoKanjiTemplate;
     QString lastWordFinderReq;
     QRect lastGrabbedRegion;
-    QLabel *statusMsg;
-    CAuxDictKeyFilter *keyFilter;
+    QLabel *statusMsg { nullptr };
+    CAuxDictKeyFilter *keyFilter { nullptr };
     bool allowLookup { true };
     bool forceFocusToEdit { false };
     bool fuzzySearch { false };

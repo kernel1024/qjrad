@@ -25,17 +25,18 @@ const QString versionFileName       (QSL("version"));
 ZKanjiDictionary::ZKanjiDictionary(QObject *parent) :
     QObject(parent)
 {
-    dataPath = QDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
-    if (!dataPath.exists())
-        dataPath.mkpath(QSL("."));
+    m_dataPath = QDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
+    if (!m_dataPath.exists())
+        m_dataPath.mkpath(QSL("."));
 }
 
 bool ZKanjiDictionary::loadDictionaries(QWidget *mainWindow)
 {
-    radicalsLookup.clear();
-    kanjiStrokes.clear();
-    kanjiGrade.clear();
-    errorString.clear();
+    m_radicalsList.clear();
+    m_radicalsLookup.clear();
+    m_kanjiStrokes.clear();
+    m_kanjiGrade.clear();
+    m_errorString.clear();
 
     if (!isDictionaryDataValid()) {
         if (!setupDictionaryData(mainWindow))
@@ -43,32 +44,38 @@ bool ZKanjiDictionary::loadDictionaries(QWidget *mainWindow)
     }
 
     // Load radicals dictionary
-    QFile fr(dataPath.filePath(radkFileName));
+    QFile fr(m_dataPath.filePath(radkFileName));
     if (!fr.open(QIODevice::ReadOnly)) {
-        errorString = tr("cannot read kanji lookup table");
+        m_errorString = tr("cannot read kanji lookup table");
         return false;
     }
     QTextStream sr(&fr);
+    QChar krad;
+    int kst = 0;
     while (!sr.atEnd()) {
         QString s = sr.readLine().trimmed();
         if (s.startsWith('#')) continue; // comment
         if (s.startsWith('$')) { // new radical
             QStringList sl = s.split(' ');
-            QChar krad = sl.at(1).at(0);
+            krad = sl.at(1).at(0);
             bool okconv = false;
-            int kst = sl.at(2).toInt(&okconv);
+            kst = sl.at(2).toInt(&okconv);
             if (!okconv) kst = 0;
-            radicalsLookup << ZKanjiRadicalItem(krad,kst,QString(),QString());
-        } else if (!s.isEmpty() && !radicalsLookup.isEmpty()) {
-            radicalsLookup.last().kanji += s;
+        } else if (!s.isEmpty() && !krad.isNull()) {
+            if (m_radicalsLookup.contains(krad)) {
+                m_radicalsLookup[krad].kanji += s;
+            } else {
+                m_radicalsLookup[krad] = ZKanjiRadicalItem(kst,s);
+                m_radicalsList.append(qMakePair(krad,kst));
+            }
         }
     }
     fr.close();
 
     // Load radicals list
-    QFile fp(dataPath.filePath(kradFileName));
+    QFile fp(m_dataPath.filePath(kradFileName));
     if (!fp.open(QIODevice::ReadOnly)) {
-        errorString = tr("cannot read kanji radicals list");
+        m_errorString = tr("cannot read kanji radicals list");
         return false;
     }
     QTextStream sp(&fp);
@@ -79,33 +86,33 @@ bool ZKanjiDictionary::loadDictionaries(QWidget *mainWindow)
             QStringList sl = s.split(' ');
             QChar k = sl.takeFirst().at(0);
             sl.takeFirst();
-            kanjiParts[k]=sl;
+            m_kanjiParts[k] = sl.join(QString());
         }
     }
     fp.close();
 
-    QFile fstrokes(dataPath.filePath(strokesFileName));
+    QFile fstrokes(m_dataPath.filePath(strokesFileName));
     if (!fstrokes.open(QIODevice::ReadOnly)) {
-        errorString = tr("Unable to load strokes info from dictionary");
+        m_errorString = tr("Unable to load strokes info from dictionary");
         return false;
     }
-    kanjiStrokes = ZGlobal::readData(&fstrokes).value<ZKanjiInfoHash>();
+    m_kanjiStrokes = ZGlobal::readData(&fstrokes).value<ZKanjiInfoHash>();
     fstrokes.close();
 
-    QFile fgrade(dataPath.filePath(gradeFileName));
+    QFile fgrade(m_dataPath.filePath(gradeFileName));
     if (!fgrade.open(QIODevice::ReadOnly)) {
-        errorString = tr("Unable to load grade info from dictionary");
+        m_errorString = tr("Unable to load grade info from dictionary");
         return false;
     }
-    kanjiGrade = ZGlobal::readData(&fgrade).value<ZKanjiInfoHash>();
+    m_kanjiGrade = ZGlobal::readData(&fgrade).value<ZKanjiInfoHash>();
     fgrade.close();
 
-    QFile findex(dataPath.filePath(indexFileName));
+    QFile findex(m_dataPath.filePath(indexFileName));
     if (!findex.open(QIODevice::ReadOnly)) {
-        errorString = tr("Unable to load kanji index info from dictionary");
+        m_errorString = tr("Unable to load kanji index info from dictionary");
         return false;
     }
-    kanjiIndex = ZGlobal::readData(&findex).value<ZKanjiIndex>();
+    m_kanjiIndex = ZGlobal::readData(&findex).value<ZKanjiIndex>();
     findex.close();
 
     return true;
@@ -123,7 +130,7 @@ bool ZKanjiDictionary::setupDictionaryData(QWidget* mainWindow)
                                                        QStandardPaths::writableLocation(QStandardPaths::HomeLocation),
                                                        tr("KANJIDIC2 file (kanjidic2.xml)"));
     if (fname.isEmpty()) {
-        errorString.clear(); // cancel and close application
+        m_errorString.clear(); // cancel and close application
         return false;
     }
 
@@ -132,12 +139,12 @@ bool ZKanjiDictionary::setupDictionaryData(QWidget* mainWindow)
     QFileInfo fRadK(fiDict.dir().filePath(radkFileName));
 
     if (!fiDict.isReadable() || !fKRad.isReadable() || !fRadK.isReadable()) {
-        errorString = tr("Unable to open specified dictionary files in %1").arg(fiDict.dir().path());
+        m_errorString = tr("Unable to open specified dictionary files in %1").arg(fiDict.dir().path());
         return false;
     }
 
-    bool res = QFile::copy(fKRad.filePath(),dataPath.filePath(kradFileName)) &&
-               QFile::copy(fRadK.filePath(),dataPath.filePath(radkFileName)) &&
+    bool res = QFile::copy(fKRad.filePath(),m_dataPath.filePath(kradFileName)) &&
+               QFile::copy(fRadK.filePath(),m_dataPath.filePath(radkFileName)) &&
                parseKanjiDict(mainWindow,fname);
 
     return res;
@@ -145,13 +152,13 @@ bool ZKanjiDictionary::setupDictionaryData(QWidget* mainWindow)
 
 void ZKanjiDictionary::deleteDictionaryData()
 {
-    QFile f1(dataPath.filePath(kanjiDictFileName));
-    QFile f2(dataPath.filePath(indexFileName));
-    QFile f3(dataPath.filePath(strokesFileName));
-    QFile f4(dataPath.filePath(gradeFileName));
-    QFile f5(dataPath.filePath(radkFileName));
-    QFile f6(dataPath.filePath(kradFileName));
-    QFile f7(dataPath.filePath(versionFileName));
+    QFile f1(m_dataPath.filePath(kanjiDictFileName));
+    QFile f2(m_dataPath.filePath(indexFileName));
+    QFile f3(m_dataPath.filePath(strokesFileName));
+    QFile f4(m_dataPath.filePath(gradeFileName));
+    QFile f5(m_dataPath.filePath(radkFileName));
+    QFile f6(m_dataPath.filePath(kradFileName));
+    QFile f7(m_dataPath.filePath(versionFileName));
 
     f1.remove();
     f2.remove();
@@ -166,17 +173,17 @@ bool ZKanjiDictionary::isDictionaryDataValid()
 {
     const QByteArray qtVersion(QT_VERSION_STR);
 
-    QFile fv(dataPath.filePath(versionFileName));
+    QFile fv(m_dataPath.filePath(versionFileName));
     if (!fv.open(QIODevice::ReadOnly)) return false;
     if (qtVersion != fv.readAll()) return false;
     fv.close();
 
-    QFileInfo fi1(dataPath.filePath(kanjiDictFileName));
-    QFileInfo fi2(dataPath.filePath(indexFileName));
-    QFileInfo fi3(dataPath.filePath(strokesFileName));
-    QFileInfo fi4(dataPath.filePath(gradeFileName));
-    QFileInfo fi5(dataPath.filePath(radkFileName));
-    QFileInfo fi6(dataPath.filePath(kradFileName));
+    QFileInfo fi1(m_dataPath.filePath(kanjiDictFileName));
+    QFileInfo fi2(m_dataPath.filePath(indexFileName));
+    QFileInfo fi3(m_dataPath.filePath(strokesFileName));
+    QFileInfo fi4(m_dataPath.filePath(gradeFileName));
+    QFileInfo fi5(m_dataPath.filePath(radkFileName));
+    QFileInfo fi6(m_dataPath.filePath(kradFileName));
 
     return (fi1.isReadable() &&
             fi2.isReadable() &&
@@ -190,15 +197,15 @@ QString ZKanjiDictionary::sortKanji(const QString &src)
 {
     QString s = src;
     std::sort(s.begin(),s.end(),[this](const QChar &c1, const QChar &c2) {
-        if (!kanjiStrokes.contains(c1) || !kanjiStrokes.contains(c2)) // also here
+        if (!m_kanjiStrokes.contains(c1) || !m_kanjiStrokes.contains(c2)) // also here
             return (c1<c2);
 
         // in-depth compare with kdict info
-        if (kanjiStrokes.value(c1) != kanjiStrokes.value(c2)) // if strokes count differs...
-            return (kanjiStrokes.value(c1) < kanjiStrokes.value(c2)); // compare by strokes count
+        if (m_kanjiStrokes.value(c1) != m_kanjiStrokes.value(c2)) // if strokes count differs...
+            return (m_kanjiStrokes.value(c1) < m_kanjiStrokes.value(c2)); // compare by strokes count
 
-        if (kanjiGrade.value(c1) != kanjiGrade.value(c2)) // if grade level differs...
-            return (kanjiGrade.value(c1) != kanjiGrade.value(c2)); // compare by grade
+        if (m_kanjiGrade.value(c1) != m_kanjiGrade.value(c2)) // if grade level differs...
+            return (m_kanjiGrade.value(c1) != m_kanjiGrade.value(c2)); // compare by grade
 
         return (c1<c2); // compare by unicode code inside same-grade/same-strokes groups
     });
@@ -207,12 +214,12 @@ QString ZKanjiDictionary::sortKanji(const QString &src)
 
 ZKanjiInfo ZKanjiDictionary::getKanjiInfo(QChar kanji)
 {
-    auto idx = kanjiIndex.value(kanji.unicode(),-1L);
+    auto idx = m_kanjiIndex.value(kanji.unicode(),-1L);
 
     if (idx < 0L)
         return ZKanjiInfo();
 
-    QFile fdict(dataPath.filePath(kanjiDictFileName));
+    QFile fdict(m_dataPath.filePath(kanjiDictFileName));
     if (!fdict.open(QIODevice::ReadOnly))
         return ZKanjiInfo();
 
@@ -224,7 +231,7 @@ ZKanjiInfo ZKanjiDictionary::getKanjiInfo(QChar kanji)
 
 QString ZKanjiDictionary::getErrorString() const
 {
-    return errorString;
+    return m_errorString;
 }
 
 void ZKanjiDictionary::cleanupDictionaries()
@@ -233,17 +240,66 @@ void ZKanjiDictionary::cleanupDictionaries()
     zF->deferredQuit();
 }
 
+const QList<QPair<QChar, int> > &ZKanjiDictionary::getAllRadicals() const
+{
+    return m_radicalsList;
+}
+
+ZKanjiRadicalItem ZKanjiDictionary::getRadicalInfo(const QChar &radical) const
+{
+    return m_radicalsLookup.value(radical);
+}
+
+QString ZKanjiDictionary::lookupRadicals(const QString &radicals) const
+{
+    QStringList res;
+    res.reserve(radicals.length());
+    for (const auto &rad : radicals)
+        res.append(m_radicalsLookup.value(rad).kanji);
+
+    // leave only kanji present for all selected radicals
+    // TODO: optimize this!
+    while (res.count()>1) {
+        QString fs = res.at(0);
+        QString ms = res.takeLast();
+        int i=0;
+        while (i<fs.length()) {
+            if (!ms.contains(fs.at(i))) {
+                fs = fs.remove(i,1);
+            } else {
+                i++;
+            }
+        }
+        if (fs.isEmpty()) {
+            res.clear();
+            res << QString();
+            break;
+        }
+        res.replace(0,fs);
+    }
+
+    if (res.isEmpty())
+        return QString();
+
+    return res.first();
+}
+
+QString ZKanjiDictionary::getKanjiParts(const QChar &kanji) const
+{
+    return m_kanjiParts.value(kanji);
+}
+
 bool ZKanjiDictionary::parseKanjiDict(QWidget* mainWindow, const QString &xmlDictFileName)
 {
     QDomDocument kanjiDict;
     QFile fk(xmlDictFileName);
     if (!fk.open(QIODevice::ReadOnly)) {
-        errorString = tr("cannot read kanjidict");
+        m_errorString = tr("cannot read kanjidict");
         return false;
     }
     if (!kanjiDict.setContent(&fk)) {
         fk.close();
-        errorString = tr("cannot parse kanjidict xml");
+        m_errorString = tr("cannot parse kanjidict xml");
         return false;
     }
 
@@ -251,9 +307,9 @@ bool ZKanjiDictionary::parseKanjiDict(QWidget* mainWindow, const QString &xmlDic
     ZKanjiInfoHash strokes;
     ZKanjiInfoHash grade;
 
-    QFile fkdict(dataPath.filePath(kanjiDictFileName));
+    QFile fkdict(m_dataPath.filePath(kanjiDictFileName));
     if (!fkdict.open(QIODevice::WriteOnly)) {
-        errorString = tr("Unable to create kanji dictionary file");
+        m_errorString = tr("Unable to create kanji dictionary file");
         return false;
     }
 
@@ -273,7 +329,7 @@ bool ZKanjiDictionary::parseKanjiDict(QWidget* mainWindow, const QString &xmlDic
             dlg.setValue(childIdx/progressDiv);
 
         if (dlg.wasCanceled()) {
-            errorString = tr("Kanji dictionary parsing was cancelled by user.");
+            m_errorString = tr("Kanji dictionary parsing was cancelled by user.");
             fkdict.close();
             fkdict.remove();
             return false;
@@ -282,16 +338,16 @@ bool ZKanjiDictionary::parseKanjiDict(QWidget* mainWindow, const QString &xmlDic
         if (i.nodeName().toLower()!=QSL("character")) continue;
 
         // literal - kanji character itself
-        const QString literal = i.firstChildElement(QSL("literal")).firstChild().toText().data();
-        if (literal.isEmpty()) {
-            errorString = tr("Invalid character entry - no *literal* tag");
+        const QString literal_s = i.firstChildElement(QSL("literal")).firstChild().toText().data();
+        if (literal_s.isEmpty()) {
+            m_errorString = tr("Invalid character entry - no *literal* tag");
             fkdict.close();
             fkdict.remove();
             return false;
         }
-        const QChar li = literal.at(0);
+        const QChar literal = literal_s.at(0);
 
-        if (li.isHighSurrogate() || li.isLowSurrogate() || !li.isPrint()) continue;
+        if (literal.isHighSurrogate() || literal.isLowSurrogate() || !literal.isPrint()) continue;
 
         // stroke count
         bool okconv = false;
@@ -299,7 +355,7 @@ bool ZKanjiDictionary::parseKanjiDict(QWidget* mainWindow, const QString &xmlDic
                                   .firstChild().toText().data();
         const int lc = strokeCnt.toInt(&okconv);
         if (strokeCnt.isEmpty() || !okconv) {
-            errorString = QSL("Invalid character entry - no *stroke_count* tag, for kanji %1.").arg(li);
+            m_errorString = QSL("Invalid character entry - no *stroke_count* tag, for kanji %1.").arg(literal);
             fkdict.close();
             fkdict.remove();
             return false;
@@ -332,43 +388,39 @@ bool ZKanjiDictionary::parseKanjiDict(QWidget* mainWindow, const QString &xmlDic
                 kun.append(j.firstChild().toText().data());
             }
             if (j.nodeName().toLower()==QSL("meaning") &&
-//                    j.attributes().isEmpty() &&
+                    j.attributes().isEmpty() &&
                     !j.firstChild().toText().data().isEmpty()) {
                 mean.append(j.firstChild().toText().data());
             }
         }
 
-        QStringList parts;
-        if (kanjiParts.contains(li))
-            parts = kanjiParts.value(li);
-
         qint64 offset = fkdict.pos();
-        qint64 size = ZGlobal::writeData(&fkdict,QVariant::fromValue(ZKanjiInfo(li,parts,on,kun,mean)));
+        qint64 size = ZGlobal::writeData(&fkdict,QVariant::fromValue(ZKanjiInfo(literal,on,kun,mean)));
         if (size <= 0) {
-            errorString = QSL("Unable to write kanji to dictionary.");
+            m_errorString = QSL("Unable to write kanji to dictionary.");
             fkdict.close();
             fkdict.remove();
             return false;
         }
 
-        index[li.unicode()] = offset;
-        strokes[li] = lc;
-        grade[li] = lg;
+        index[literal.unicode()] = offset;
+        strokes[literal] = lc;
+        grade[literal] = lg;
     }
     fkdict.close();
 
-    QFile fidx(dataPath.filePath(indexFileName));
+    QFile fidx(m_dataPath.filePath(indexFileName));
     if (!fidx.open(QIODevice::WriteOnly)) {
-        errorString = QSL("Unable to create Kanji index file.");
+        m_errorString = QSL("Unable to create Kanji index file.");
         fkdict.remove();
         return false;
     }
     ZGlobal::writeData(&fidx,QVariant::fromValue(index));
     fidx.close();
 
-    QFile fstrokes(dataPath.filePath(strokesFileName));
+    QFile fstrokes(m_dataPath.filePath(strokesFileName));
     if (!fstrokes.open(QIODevice::WriteOnly)) {
-        errorString = QSL("Unable to create Kanji strokes file.");
+        m_errorString = QSL("Unable to create Kanji strokes file.");
         fkdict.remove();
         fidx.remove();
         return false;
@@ -376,9 +428,9 @@ bool ZKanjiDictionary::parseKanjiDict(QWidget* mainWindow, const QString &xmlDic
     ZGlobal::writeData(&fstrokes,QVariant::fromValue(strokes));
     fstrokes.close();
 
-    QFile fgrade(dataPath.filePath(gradeFileName));
+    QFile fgrade(m_dataPath.filePath(gradeFileName));
     if (!fgrade.open(QIODevice::WriteOnly)) {
-        errorString = QSL("Unable to create Kanji grade file.");
+        m_errorString = QSL("Unable to create Kanji grade file.");
         fkdict.remove();
         fidx.remove();
         fstrokes.remove();
@@ -389,9 +441,9 @@ bool ZKanjiDictionary::parseKanjiDict(QWidget* mainWindow, const QString &xmlDic
 
     const QByteArray qtVersion(QT_VERSION_STR);
 
-    QFile fversion(dataPath.filePath(versionFileName));
+    QFile fversion(m_dataPath.filePath(versionFileName));
     if (!fversion.open(QIODevice::WriteOnly)) {
-        errorString = QSL("Unable to create Kanji dictionary version file.");
+        m_errorString = QSL("Unable to create Kanji dictionary version file.");
         fgrade.remove();
         fkdict.remove();
         fidx.remove();
@@ -404,60 +456,26 @@ bool ZKanjiDictionary::parseKanjiDict(QWidget* mainWindow, const QString &xmlDic
     return true;
 }
 
-ZKanjiRadicalItem::ZKanjiRadicalItem(QChar aRadical)
+int ZKanjiDictionary::getKanjiGrade(const QChar &kanji) const
 {
-    radical = aRadical;
-    strokes = 0;
-    jisCode.clear();
-    kanji.clear();
+    if (m_kanjiGrade.contains(kanji))
+        return m_kanjiGrade.value(kanji);
+
+    return 0;
 }
 
-ZKanjiRadicalItem::ZKanjiRadicalItem(QChar aRadical, int aStrokes)
+int ZKanjiDictionary::getKanjiStrokes(const QChar &kanji) const
 {
-    radical = aRadical;
-    strokes = aStrokes;
-    jisCode.clear();
-    kanji.clear();
+    if (m_kanjiStrokes.contains(kanji))
+        return m_kanjiStrokes.value(kanji);
+
+    return 0;
 }
 
-ZKanjiRadicalItem::ZKanjiRadicalItem(QChar aRadical, int aStrokes, const QString &aJisCode, const QString &aKanji)
-{
-    radical = aRadical;
-    strokes = aStrokes;
-    jisCode = aJisCode;
-    kanji = aKanji;
-}
-
-bool ZKanjiRadicalItem::operator ==(const ZKanjiRadicalItem &s) const
-{
-    return (radical==s.radical);
-}
-
-bool ZKanjiRadicalItem::operator !=(const ZKanjiRadicalItem &s) const
-{
-    return (radical!=s.radical);
-}
-
-bool ZKanjiRadicalItem::operator <(const ZKanjiRadicalItem &ref) const
-{
-    if (strokes==ref.strokes)
-        return (radical<ref.radical);
-
-    return (strokes<ref.strokes);
-}
-
-bool ZKanjiRadicalItem::operator >(const ZKanjiRadicalItem &ref) const
-{
-    if (strokes==ref.strokes)
-        return (radical>ref.radical);
-
-    return (strokes>ref.strokes);
-}
-
-ZKanjiInfo::ZKanjiInfo(QChar aKanji, const QStringList &aParts, const QStringList &aOnReading, const QStringList &aKunReading, const QStringList &aMeaning)
+ZKanjiInfo::ZKanjiInfo(QChar aKanji, const QStringList &aOnReading, const QStringList &aKunReading,
+                       const QStringList &aMeaning)
 {
     kanji = aKanji;
-    parts = aParts;
     onReading = aOnReading;
     kunReading = aKunReading;
     meaning = aMeaning;
@@ -480,13 +498,19 @@ bool ZKanjiInfo::isEmpty() const
 
 QDataStream &operator <<(QDataStream &out, const ZKanjiInfo &obj)
 {
-    out << obj.kanji << obj.parts << obj.onReading << obj.kunReading << obj.meaning;
+    out << obj.kanji << obj.onReading << obj.kunReading << obj.meaning;
     return out;
 }
 
 
 QDataStream &operator >>(QDataStream &in, ZKanjiInfo &obj)
 {
-    in >> obj.kanji >> obj.parts >> obj.onReading >> obj.kunReading >> obj.meaning;
+    in >> obj.kanji >> obj.onReading >> obj.kunReading >> obj.meaning;
     return in;
+}
+
+ZKanjiRadicalItem::ZKanjiRadicalItem(int aStrokes, const QString &aKanji)
+{
+    strokes = aStrokes;
+    kanji = aKanji;
 }

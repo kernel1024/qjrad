@@ -1,10 +1,13 @@
-#include "kanjimodel.h"
-#include "global.h"
 #include <QApplication>
+#include <QPalette>
 #include <QPainter>
 #include <QPen>
 #include <QBrush>
 #include <QFont>
+
+#include "kanjimodel.h"
+#include "kdictionary.h"
+#include "global.h"
 
 namespace CDefaults {
 const int foundKanjiColorBiasMultiplier = 60;
@@ -13,18 +16,18 @@ const int kanjiWidthDivider = 10;
 const int rareKanjiMinimumGrade = 8;
 }
 
-ZKanjiModel::ZKanjiModel(QObject *parent, const QString &KanjiList) :
-    QAbstractListModel(parent)
+ZKanjiModel::ZKanjiModel(QObject *parent, ZKanjiDictionary *dict, const QString &KanjiList)
+    : QAbstractListModel(parent)
 {
-    kanjiList = KanjiList;
-    mainWnd = qobject_cast<ZMainWindow *>(parent);
+    m_kanjiList = KanjiList;
+    m_dict = dict;
 }
 
 Qt::ItemFlags ZKanjiModel::flags(const QModelIndex &index) const
 {
     if (index.isValid()) {
-        if (index.row()<kanjiList.length()) {
-            QChar k = kanjiList.at(index.row());
+        if (index.row()<m_kanjiList.length()) {
+            QChar k = m_kanjiList.at(index.row());
             if (!isRegularKanji(k))
                 return Qt::ItemIsEnabled;
         }
@@ -37,8 +40,8 @@ QVariant ZKanjiModel::data(const QModelIndex &index, int role) const
 {
     if (!index.isValid()) return QVariant();
 
-    if (index.row()>=kanjiList.length()) return QVariant();
-    QChar k = kanjiList.at(index.row());
+    if (index.row()>=m_kanjiList.length()) return QVariant();
+    QChar k = m_kanjiList.at(index.row());
 
     if (role == Qt::DecorationRole) {
         QColor background = QApplication::palette("QListView").color(QPalette::Base);
@@ -63,11 +66,13 @@ QVariant ZKanjiModel::data(const QModelIndex &index, int role) const
             pn.setPen(QPen(kanjiColor));
             pn.drawText(0,0,sz-1,sz-1,Qt::AlignCenter,tr("%1").arg(v));
         } else { // this is regular kanji
-            if (mainWnd->getKanjiGrade(k) <= CDefaults::rareKanjiMinimumGrade) {
-                pn.setPen(QPen(kanjiColor));
-            } else {
-                pn.setPen(QPen(rareKanjiColor));
-}
+            if (m_dict) {
+                if (m_dict->getKanjiGrade(k) <= CDefaults::rareKanjiMinimumGrade) {
+                    pn.setPen(QPen(kanjiColor));
+                } else {
+                    pn.setPen(QPen(rareKanjiColor));
+                }
+            }
             pn.drawText(0,0,sz-1,sz-1,Qt::AlignCenter,k);
         }
         return px;
@@ -78,7 +83,7 @@ QVariant ZKanjiModel::data(const QModelIndex &index, int role) const
 int ZKanjiModel::rowCount(const QModelIndex & parent) const
 {
     Q_UNUSED(parent)
-    return kanjiList.length();
+    return m_kanjiList.length();
 }
 
 void ZKanjiModel::createHxBox(QVector<QLine> &rrct, int sz, int hv) const
