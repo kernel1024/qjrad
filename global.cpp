@@ -71,6 +71,8 @@ void ZGlobal::initialize()
     QGuiApplication::setApplicationDisplayName(QSL("QJRad - Kanji Lookup Tool"));
     QCoreApplication::setOrganizationName(QSL("kernel1024"));
     QCoreApplication::setApplicationName(QSL("qjrad"));
+
+    QCoreApplication::setAttribute(Qt::AA_DontUseNativeDialogs,true);
 }
 
 void ZGlobal::deferredQuit()

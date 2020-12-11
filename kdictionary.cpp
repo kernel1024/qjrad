@@ -1,3 +1,4 @@
+#include <QProgressDialog>
 #include <QDomDocument>
 #include <QFile>
 #include <QTextStream>
@@ -118,20 +119,13 @@ bool ZKanjiDictionary::setupDictionaryData(QWidget* mainWindow)
                          tr("This is the first start. Please specify directory with Kanji dictionary files:\n"
                             "%1, %2, %3.").arg(xmlKanjiDictFileName,kradFileName,radkFileName));
 
-    QFileDialog dlg(mainWindow);
-    dlg.setWindowTitle(tr("KANJIDIC2 XML dictionary"));
-    dlg.setAcceptMode(QFileDialog::AcceptOpen);
-    dlg.setFileMode(QFileDialog::ExistingFile);
-    dlg.setDirectory(QStandardPaths::writableLocation(QStandardPaths::HomeLocation));
-    dlg.setNameFilter(QSL("KANJIDIC2 file (kanjidic2.xml)"));
-    dlg.setOptions(QFileDialog::DontUseNativeDialog | QFileDialog::DontUseCustomDirectoryIcons);
-    if ((dlg.exec()!=QDialog::Accepted) || (dlg.selectedFiles().isEmpty())) {
+    const QString fname = QFileDialog::getOpenFileName(mainWindow,tr("KANJIDIC2 XML dictionary"),
+                                                       QStandardPaths::writableLocation(QStandardPaths::HomeLocation),
+                                                       tr("KANJIDIC2 file (kanjidic2.xml)"));
+    if (fname.isEmpty()) {
         errorString.clear(); // cancel and close application
         return false;
     }
-    // BUG: something leaves thread after this dialog, preventing app to close (on Qt5)
-
-    const QString fname = dlg.selectedFiles().first();
 
     QFileInfo fiDict(fname);
     QFileInfo fKRad(fiDict.dir().filePath(kradFileName));
@@ -144,7 +138,7 @@ bool ZKanjiDictionary::setupDictionaryData(QWidget* mainWindow)
 
     bool res = QFile::copy(fKRad.filePath(),dataPath.filePath(kradFileName)) &&
                QFile::copy(fRadK.filePath(),dataPath.filePath(radkFileName)) &&
-               parseKanjiDict(fname);
+               parseKanjiDict(mainWindow,fname);
 
     return res;
 }
@@ -239,7 +233,7 @@ void ZKanjiDictionary::cleanupDictionaries()
     zF->deferredQuit();
 }
 
-bool ZKanjiDictionary::parseKanjiDict(const QString &xmlDictFileName)
+bool ZKanjiDictionary::parseKanjiDict(QWidget* mainWindow, const QString &xmlDictFileName)
 {
     QDomDocument kanjiDict;
     QFile fk(xmlDictFileName);
@@ -263,46 +257,49 @@ bool ZKanjiDictionary::parseKanjiDict(const QString &xmlDictFileName)
         return false;
     }
 
-    QDomElement root = kanjiDict.documentElement();
+    const QDomElement root = kanjiDict.documentElement();
+
+    const int progressDiv = 5;
+    int childIdx = 0;
+    QProgressDialog dlg(tr("Parsing %1").arg(kanjiDictFileName),tr("Cancel"),
+                        0,root.childNodes().count()/progressDiv,mainWindow);
+    dlg.setMinimumDuration(0);
+    dlg.setWindowModality(Qt::WindowModal);
+    QApplication::processEvents();
 
     for (QDomNode i = root.firstChild();!i.isNull();i=i.nextSibling()) {
+        childIdx++;
+        if (dlg.value() != (childIdx/progressDiv))
+            dlg.setValue(childIdx/progressDiv);
+
+        if (dlg.wasCanceled()) {
+            errorString = tr("Kanji dictionary parsing was cancelled by user.");
+            fkdict.close();
+            fkdict.remove();
+            return false;
+        }
+
         if (i.nodeName().toLower()!=QSL("character")) continue;
-        if (i.firstChildElement(QSL("literal")).isNull() ||
-                !i.firstChildElement(QSL("literal")).hasChildNodes() ||
-                !i.firstChildElement(QSL("literal")).firstChild().isText() ||
-                i.firstChildElement(QSL("literal")).firstChild().toText().data().isEmpty()) {
+
+        // literal - kanji character itself
+        const QString literal = i.firstChildElement(QSL("literal")).firstChild().toText().data();
+        if (literal.isEmpty()) {
             errorString = tr("Invalid character entry - no *literal* tag");
             fkdict.close();
             fkdict.remove();
             return false;
         }
-        QStringList on;
-        QStringList kun;
-        QStringList mean;
-
-        // literal - kanji character itself
-        QChar li = i.firstChildElement(QSL("literal")).firstChild().toText().data().at(0);
+        const QChar li = literal.at(0);
 
         if (li.isHighSurrogate() || li.isLowSurrogate() || !li.isPrint()) continue;
 
         // stroke count
-        if (i.firstChildElement(QSL("misc")).isNull() ||
-                !i.firstChildElement(QSL("misc")).hasChildNodes() ||
-                i.firstChildElement(QSL("misc")).firstChildElement(QSL("stroke_count")).isNull() ||
-                !i.firstChildElement(QSL("misc")).firstChildElement(QSL("stroke_count")).hasChildNodes() ||
-                !i.firstChildElement(QSL("misc")).firstChildElement(QSL("stroke_count")).firstChild().isText() ||
-                i.firstChildElement(QSL("misc")).firstChildElement(QSL("stroke_count")).firstChild().toText().data().isEmpty()) {
-            errorString = QSL("Invalid character entry - no *stroke_count* tag, for kanji %1.").arg(li);
-            fkdict.close();
-            fkdict.remove();
-            return false;
-        }
         bool okconv = false;
-        // stroke count
-        int lc = i.firstChildElement(QSL("misc")).firstChildElement(QSL("stroke_count"))
-                 .firstChild().toText().data().toInt(&okconv);
-        if (!okconv) {
-            errorString = QSL("Invalid character entry - invalid *stroke_count* tag, for kanji %1.").arg(li);
+        const QString strokeCnt = i.firstChildElement(QSL("misc")).firstChildElement(QSL("stroke_count"))
+                                  .firstChild().toText().data();
+        const int lc = strokeCnt.toInt(&okconv);
+        if (strokeCnt.isEmpty() || !okconv) {
+            errorString = QSL("Invalid character entry - no *stroke_count* tag, for kanji %1.").arg(li);
             fkdict.close();
             fkdict.remove();
             return false;
@@ -310,46 +307,34 @@ bool ZKanjiDictionary::parseKanjiDict(const QString &xmlDictFileName)
 
         // grade: 1..6 - Kyouiku Kanji, 7..8 - remaining Jouyou Kanji, 9..10 - Jinmeiyou Kanji, 11 - remaining unclassified Kanji
         const int unclassifiedKanjiGrade = 11;
-        int lg = unclassifiedKanjiGrade;
-        if (!i.firstChildElement(QSL("misc")).isNull() &&
-                i.firstChildElement(QSL("misc")).hasChildNodes() &&
-                !i.firstChildElement(QSL("misc")).firstChildElement(QSL("grade")).isNull() &&
-                i.firstChildElement(QSL("misc")).firstChildElement(QSL("grade")).hasChildNodes() &&
-                i.firstChildElement(QSL("misc")).firstChildElement(QSL("grade")).firstChild().isText() &&
-                !i.firstChildElement(QSL("misc")).firstChildElement(QSL("grade")).firstChild().toText().data().isEmpty()) {
-            lg = i.firstChildElement(QSL("misc")).firstChildElement(QSL("grade")).firstChild().toText().data().toInt(&okconv);
-            if (!okconv) lg = unclassifiedKanjiGrade;
-        }
+        int lg = i.firstChildElement(QSL("misc")).firstChildElement(QSL("grade")).firstChild().toText().data().toInt(&okconv);
+        if (!okconv)
+            lg = unclassifiedKanjiGrade;
 
         // reading and meaning
-        if (!i.firstChildElement(QSL("reading_meaning")).isNull() &&
-                i.firstChildElement(QSL("reading_meaning")).hasChildNodes() &&
-                !i.firstChildElement(QSL("reading_meaning")).firstChildElement(QSL("rmgroup")).isNull() &&
-                i.firstChildElement(QSL("reading_meaning")).firstChildElement(QSL("rmgroup")).hasChildNodes()) {
-            for (QDomNode j = i.firstChildElement(QSL("reading_meaning")).firstChildElement(QSL("rmgroup")).firstChild();
-                 !j.isNull();j=j.nextSibling()) {
-                if (j.nodeName().toLower()==QSL("reading") &&
-                        !j.attributes().namedItem(QSL("r_type")).isNull() &&
-                        j.attributes().namedItem(QSL("r_type")).nodeValue().toLower()==QSL("ja_on") &&
-                        !j.firstChild().isNull() &&
-                        j.firstChild().isText() &&
-                        !j.firstChild().toText().data().isEmpty()) {
-                    on << j.firstChild().toText().data();
-                }
-                if (j.nodeName().toLower()==QSL("reading") &&
-                        !j.attributes().namedItem(QSL("r_type")).isNull() &&
-                        j.attributes().namedItem(QSL("r_type")).nodeValue().toLower()==QSL("ja_kun") &&
-                        !j.firstChild().isNull() &&
-                        j.firstChild().isText() &&
-                        !j.firstChild().toText().data().isEmpty()) {
-                    kun << j.firstChild().toText().data();
-                }
-                if (j.nodeName().toLower()==QSL("meaning") &&
-                        j.attributes().isEmpty() &&
-                        j.firstChild().isText() &&
-                        !j.firstChild().toText().data().isEmpty()) {
-                    mean << j.firstChild().toText().data();
-                }
+        const QDomNode rmgroup = i.firstChildElement(QSL("reading_meaning")).firstChildElement(QSL("rmgroup"));
+        QStringList on;
+        on.reserve(rmgroup.childNodes().count());
+        QStringList kun;
+        kun.reserve(rmgroup.childNodes().count());
+        QStringList mean;
+        mean.reserve(rmgroup.childNodes().count());
+
+        for (QDomNode j = rmgroup.firstChild(); !j.isNull(); j=j.nextSibling()) {
+            if (j.nodeName().toLower()==QSL("reading") &&
+                    j.attributes().namedItem(QSL("r_type")).nodeValue().toLower()==QSL("ja_on") &&
+                    !j.firstChild().toText().data().isEmpty()) {
+                on.append(j.firstChild().toText().data());
+            }
+            if (j.nodeName().toLower()==QSL("reading") &&
+                    j.attributes().namedItem(QSL("r_type")).nodeValue().toLower()==QSL("ja_kun") &&
+                    !j.firstChild().toText().data().isEmpty()) {
+                kun.append(j.firstChild().toText().data());
+            }
+            if (j.nodeName().toLower()==QSL("meaning") &&
+//                    j.attributes().isEmpty() &&
+                    !j.firstChild().toText().data().isEmpty()) {
+                mean.append(j.firstChild().toText().data());
             }
         }
 

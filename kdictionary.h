@@ -65,7 +65,7 @@ private:
 
     QString errorString;
 
-    bool parseKanjiDict(const QString& xmlDictFileName);
+    bool parseKanjiDict(QWidget *mainWindow, const QString& xmlDictFileName);
     bool setupDictionaryData(QWidget *mainWindow);
     void deleteDictionaryData();
     bool isDictionaryDataValid();

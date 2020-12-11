@@ -22,7 +22,6 @@ namespace CDefaults {
 const int btnWidthMultiplier = 13;
 const int btnWidthDivider = 10;
 const int screenCaptureDelay = 200;
-const int splittersEnforcingDelay = 1000;
 const int statusBarMessageMinWidth = 150;
 const int radicalsColorBiasMultiplier = 25;
 const int dictManagerStatusMessageTimeout = 5000;
@@ -38,8 +37,6 @@ ZMainWindow::ZMainWindow(QWidget *parent) :
     setWindowTitle(QGuiApplication::applicationDisplayName());
 
     zF->dbusDict->setMainWindow(this);
-
-    forceFocusToEdit = false;
 
     infoKanjiTemplate = ui->infoKanji->toHtml();
     ui->infoKanji->clear();
@@ -105,14 +102,8 @@ ZMainWindow::ZMainWindow(QWidget *parent) :
 
     ui->wdictViewer->clear();
     lastWordFinderReq.clear();
-    fuzzySearch = false;
 
     zF->loadDictionaries();
-
-    QTimer::singleShot(CDefaults::splittersEnforcingDelay,this,[this](){
-        setupDictionaries();
-        updateSplitters();
-    });
 
 #ifndef WITH_OCR
     ui->btnCapture->setEnabled(false);
@@ -123,6 +114,28 @@ ZMainWindow::ZMainWindow(QWidget *parent) :
 ZMainWindow::~ZMainWindow()
 {
     delete ui;
+}
+
+void ZMainWindow::showEvent(QShowEvent *event)
+{
+    Q_UNUSED(event);
+
+    static bool firstShow = true;
+
+    if (firstShow) {
+        QMetaObject::invokeMethod(this,[this](){
+            setupDictionaries();
+            updateSplitters();
+        },Qt::QueuedConnection);
+        firstShow = false;
+    }
+}
+
+void ZMainWindow::restoreWindow()
+{
+    showNormal();
+    raise();
+    activateWindow();
 }
 
 void ZMainWindow::setupDictionaries()
@@ -825,11 +838,4 @@ bool CAuxDictKeyFilter::eventFilter(QObject *obj, QEvent *event)
             Q_EMIT keyPressed(ev->key());
     }
     return QObject::eventFilter(obj,event);
-}
-
-void ZMainWindow::restoreWindow()
-{
-    showNormal();
-    raise();
-    activateWindow();
 }

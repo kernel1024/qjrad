@@ -49,17 +49,16 @@ public:
 
 private:
     Ui::MainWindow *ui;
-    QObjectList buttons, kanaButtons;
-    bool allowLookup;
-    QLabel *statusMsg;
-    QString infoKanjiTemplate;
-    bool forceFocusToEdit;
-    CAuxDictKeyFilter *keyFilter;
-    QRect lastGrabbedRegion;
     ZKanjiDictionary dict;
-
+    QObjectList buttons, kanaButtons;
+    QString infoKanjiTemplate;
     QString lastWordFinderReq;
-    bool fuzzySearch;
+    QRect lastGrabbedRegion;
+    QLabel *statusMsg;
+    CAuxDictKeyFilter *keyFilter;
+    bool allowLookup { true };
+    bool forceFocusToEdit { false };
+    bool fuzzySearch { false };
 
     void insertOneWidget(QWidget *w, int &row, int &clmn, bool isKana);
 
@@ -67,6 +66,9 @@ private:
     void restoreWindow();
     void startWordSearch(const QString &newValue, bool fuzzy);
     void updateResultsCountLabel();
+
+protected:
+    void showEvent(QShowEvent *event) override;
 
 public Q_SLOTS:
     // Window geometry
