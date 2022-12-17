@@ -565,7 +565,7 @@ void ZMainWindow::regionGrabbed(const QPixmap &pic)
                 QStringList sl2;
                 sl2.reserve(maxlen);
                 for (int i=0;i<maxlen;i++)
-                    sl2 << QString();
+                    sl2 << QString(sl.count(),QChar(u' '));
                 for (int i=0;i<sl.count();i++) {
                     for (int j=0;j<sl.at(i).length();j++)
                         sl2[maxlen-j-1][i]=sl[i][j];
@@ -574,7 +574,8 @@ void ZMainWindow::regionGrabbed(const QPixmap &pic)
             }
             if (!sl.isEmpty()) {
                 text = sl.join(QChar(' '));
-                text.replace(QRegularExpression(QSL("[\r\n]+")),QSL(" "));
+                const QRegularExpression newlineRx(QSL("[\r\n]+"));
+                text.replace(newlineRx,QSL(" "));
             }
         }
     }

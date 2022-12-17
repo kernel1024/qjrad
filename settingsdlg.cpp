@@ -132,7 +132,9 @@ void ZSettingsDialog::updateOCRLanguages()
 void ZSettingsDialog::ocrDatapath()
 {
 #ifdef WITH_OCR
-    QString datapath = QFileDialog::getExistingDirectory(this,tr("Tesseract datapath"),ui->editOCRDatapath->text());
+    QString datapath = QFileDialog::getExistingDirectory(this,tr("Tesseract datapath"),ui->editOCRDatapath->text(),
+                                                         QFileDialog::ShowDirsOnly | QFileDialog::DontUseNativeDialog |
+                                                         QFileDialog::DontUseCustomDirectoryIcons);
     if (!datapath.isEmpty())
         ui->editOCRDatapath->setText(datapath);
     updateOCRLanguages();
