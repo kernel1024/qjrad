@@ -8,6 +8,7 @@
 #include <QMessageBox>
 #include <QDebug>
 #include <algorithm>
+#include <set>
 
 #include "kdictionary.h"
 #include "global.h"
@@ -53,10 +54,10 @@ bool ZKanjiDictionary::loadDictionaries(QWidget *mainWindow)
     QChar krad;
     int kst = 0;
     while (!sr.atEnd()) {
-        QString s = sr.readLine().trimmed();
+        const QString s = sr.readLine().trimmed();
         if (s.startsWith('#')) continue; // comment
         if (s.startsWith('$')) { // new radical
-            QStringList sl = s.split(' ');
+            const QStringList sl = s.split(' ');
             krad = sl.at(1).at(0);
             bool okconv = false;
             kst = sl.at(2).toInt(&okconv);
@@ -80,11 +81,11 @@ bool ZKanjiDictionary::loadDictionaries(QWidget *mainWindow)
     }
     QTextStream sp(&fp);
     while (!sp.atEnd()) {
-        QString s = sp.readLine().trimmed();
+        const QString s = sp.readLine().trimmed();
         if (s.startsWith('#')) continue; // comment
         if (!s.isEmpty()) {
             QStringList sl = s.split(' ');
-            QChar k = sl.takeFirst().at(0);
+            const QChar k = sl.takeFirst().at(0);
             sl.takeFirst();
             m_kanjiParts[k] = sl.join(QString());
         }
@@ -134,18 +135,18 @@ bool ZKanjiDictionary::setupDictionaryData(QWidget* mainWindow)
         return false;
     }
 
-    QFileInfo fiDict(fname);
-    QFileInfo fKRad(fiDict.dir().filePath(kradFileName));
-    QFileInfo fRadK(fiDict.dir().filePath(radkFileName));
+    const QFileInfo fiDict(fname);
+    const QFileInfo fKRad(fiDict.dir().filePath(kradFileName));
+    const QFileInfo fRadK(fiDict.dir().filePath(radkFileName));
 
     if (!fiDict.isReadable() || !fKRad.isReadable() || !fRadK.isReadable()) {
         m_errorString = tr("Unable to open specified dictionary files in %1").arg(fiDict.dir().path());
         return false;
     }
 
-    bool res = QFile::copy(fKRad.filePath(),m_dataPath.filePath(kradFileName)) &&
-               QFile::copy(fRadK.filePath(),m_dataPath.filePath(radkFileName)) &&
-               parseKanjiDict(mainWindow,fname);
+    const bool res = QFile::copy(fKRad.filePath(),m_dataPath.filePath(kradFileName)) &&
+                     QFile::copy(fRadK.filePath(),m_dataPath.filePath(radkFileName)) &&
+                     parseKanjiDict(mainWindow,fname);
 
     return res;
 }
@@ -178,12 +179,12 @@ bool ZKanjiDictionary::isDictionaryDataValid()
     if (qtVersion != fv.readAll()) return false;
     fv.close();
 
-    QFileInfo fi1(m_dataPath.filePath(kanjiDictFileName));
-    QFileInfo fi2(m_dataPath.filePath(indexFileName));
-    QFileInfo fi3(m_dataPath.filePath(strokesFileName));
-    QFileInfo fi4(m_dataPath.filePath(gradeFileName));
-    QFileInfo fi5(m_dataPath.filePath(radkFileName));
-    QFileInfo fi6(m_dataPath.filePath(kradFileName));
+    const QFileInfo fi1(m_dataPath.filePath(kanjiDictFileName));
+    const QFileInfo fi2(m_dataPath.filePath(indexFileName));
+    const QFileInfo fi3(m_dataPath.filePath(strokesFileName));
+    const QFileInfo fi4(m_dataPath.filePath(gradeFileName));
+    const QFileInfo fi5(m_dataPath.filePath(radkFileName));
+    const QFileInfo fi6(m_dataPath.filePath(kradFileName));
 
     return (fi1.isReadable() &&
             fi2.isReadable() &&
@@ -252,36 +253,39 @@ ZKanjiRadicalItem ZKanjiDictionary::getRadicalInfo(const QChar &radical) const
 
 QString ZKanjiDictionary::lookupRadicals(const QString &radicals) const
 {
-    QStringList res;
-    res.reserve(radicals.length());
-    for (const auto &rad : radicals)
-        res.append(m_radicalsLookup.value(rad).kanji);
-
-    // leave only kanji present for all selected radicals
-    // TODO: optimize this!
-    while (res.count()>1) {
-        QString fs = res.at(0);
-        QString ms = res.takeLast();
-        int i=0;
-        while (i<fs.length()) {
-            if (!ms.contains(fs.at(i))) {
-                fs = fs.remove(i,1);
-            } else {
-                i++;
-            }
-        }
-        if (fs.isEmpty()) {
-            res.clear();
-            res << QString();
-            break;
-        }
-        res.replace(0,fs);
-    }
-
-    if (res.isEmpty())
+    if (radicals.isEmpty())
         return QString();
 
-    return res.first();
+    QStringList kanjiList;
+    kanjiList.reserve(radicals.length());
+    for (const auto &rad : radicals)
+        kanjiList.append(m_radicalsLookup.value(rad).kanji);
+
+    // leave only kanji present for all selected radicals
+    const QString first = kanjiList.first();
+    std::set<QChar> common_chars(first.begin(), first.end());
+
+    // iterate through the rest of the strings and keep only common characters
+    for (auto it = kanjiList.begin() + 1; it != kanjiList.end(); ++it)
+    {
+        const std::set<QChar> current_chars(it->begin(), it->end());
+        std::set<QChar> intersection;
+
+        if (common_chars.empty() || current_chars.empty())
+            break;
+
+        std::set_intersection(common_chars.begin(), common_chars.end(),
+                              current_chars.begin(), current_chars.end(),
+                              std::inserter(intersection, intersection.begin()));
+
+        common_chars = intersection;
+    }
+
+    QString res;
+    for (auto common_char : common_chars)
+        res.append(common_char);
+
+    return res;
 }
 
 QString ZKanjiDictionary::getKanjiParts(const QChar &kanji) const
@@ -473,12 +477,12 @@ int ZKanjiDictionary::getKanjiStrokes(const QChar &kanji) const
 }
 
 ZKanjiInfo::ZKanjiInfo(QChar aKanji, const QStringList &aOnReading, const QStringList &aKunReading,
-                       const QStringList &aMeaning)
+                       const QStringList &aMeaning) :
+    kanji(aKanji),
+    onReading(aOnReading),
+    kunReading(aKunReading),
+    meaning(aMeaning)
 {
-    kanji = aKanji;
-    onReading = aOnReading;
-    kunReading = aKunReading;
-    meaning = aMeaning;
 }
 
 bool ZKanjiInfo::operator ==(const ZKanjiInfo &s) const
@@ -509,8 +513,8 @@ QDataStream &operator >>(QDataStream &in, ZKanjiInfo &obj)
     return in;
 }
 
-ZKanjiRadicalItem::ZKanjiRadicalItem(int aStrokes, const QString &aKanji)
+ZKanjiRadicalItem::ZKanjiRadicalItem(int aStrokes, const QString &aKanji) :
+    strokes(aStrokes),
+    kanji(aKanji)
 {
-    strokes = aStrokes;
-    kanji = aKanji;
 }
