@@ -54,6 +54,9 @@ public:
     static QColor middleColor(const QColor &c1, const QColor &c2, int mul = 50, int div = 100);
     static QString makeSimpleHtml(const QString &title, const QString &content);
 
+    static qint64 writeData(QFile* file, const QVariant &data);
+    static QVariant readData(QFile* file, const QVariant &defaultValue = QVariant());
+
 #ifdef WITH_OCR
     QString ocrGetActiveLanguage();
     QString ocrGetDatapath();
@@ -61,8 +64,6 @@ public:
     QString processImageWithOCR(const QImage& image);
     bool isOCRReady() const;
 
-    static qint64 writeData(QFile* file, const QVariant &data);
-    static QVariant readData(QFile* file, const QVariant &defaultValue = QVariant());
 private:
     tesseract::TessBaseAPI* m_ocr { nullptr };
     static PIX* Image2PIX(const QImage& qImage);
