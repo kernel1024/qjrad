@@ -46,8 +46,8 @@ packagesExist(tesseract) {
 use_ocr {
     DEFINES += WITH_OCR=1
     QMAKE_CXXFLAGS += -Wno-ignored-qualifiers
-    PKGCONFIG += tesseract xcb xcb-xfixes xcb-image
-    LIBS += -llept
+    PKGCONFIG += xcb xcb-xfixes xcb-image
+    PKGCONFIG += tesseract lept
 }
 
 DBUS_ADAPTORS = org.qjrad.dictionary.xml
