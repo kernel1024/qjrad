@@ -452,11 +452,7 @@ void ZMainWindow::radicalPressed(bool checked)
         foundKanji.clear();
     }
 
-    QItemSelectionModel *m = ui->listKanji->selectionModel();
-    QAbstractItemModel *n = ui->listKanji->model();
     ui->listKanji->setModel(new ZKanjiModel(this,dict.data(),foundKanji));
-    m->deleteLater();
-    n->deleteLater();
     ui->infoKanji->clear();
 
     if (bpcnt>0) {
