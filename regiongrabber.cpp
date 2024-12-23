@@ -18,6 +18,7 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+#include <utility>
 #include "regiongrabber.h"
 #include "global.h"
 #include "qsl.h"
@@ -295,7 +296,7 @@ void ZRegionGrabber::mouseMoveEvent( QMouseEvent* e )
         if ( selection.isNull() )
             return;
         bool found = false;
-        for (const auto& r : qAsConst(handles)) {
+        for (const auto& r : std::as_const(handles)) {
             if ( r->contains( e->pos() ) )
             {
                 mouseOverHandle = r;

@@ -1,3 +1,4 @@
+#include <utility>
 #include <QMessageBox>
 #include <QLineEdit>
 #include <QUrl>
@@ -426,9 +427,9 @@ void ZMainWindow::radicalPressed(bool checked)
         foundKanji = dict->sortKanji(kanjiList);
         // disable radicals that not appears on found set entirely
         QList<QChar> availableRadicals;
-        for (const auto &kj : qAsConst(foundKanji)) {
+        for (const auto &kj : std::as_const(foundKanji)) {
             const QString parts = dict->getKanjiParts(kj);
-            for (const auto &rad : qAsConst(parts)) {
+            for (const auto &rad : std::as_const(parts)) {
                 if (!availableRadicals.contains(rad))
                     availableRadicals.append(rad);
             }
@@ -553,7 +554,7 @@ void ZMainWindow::regionGrabbed(const QPixmap &pic)
             QString s = zF->processImageWithOCR(cpx);
             QStringList sl = s.split('\n',Qt::SkipEmptyParts);
             int maxlen = 0;
-            for (const auto &i : qAsConst(sl)) {
+            for (const auto &i : std::as_const(sl)) {
                 if (i.length()>maxlen)
                     maxlen = i.length();
             }
